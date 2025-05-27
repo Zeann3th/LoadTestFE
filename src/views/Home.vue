@@ -29,7 +29,7 @@ const stopResize = () => {
 const onResize = (e: MouseEvent) => {
   if (!isResizing.value) return;
   const newWidth = e.clientX;
-  if (newWidth > 500 && newWidth < 600) {
+  if (newWidth > 500 && newWidth < 900) {
     sidebarWidth.value = newWidth;
   }
 };

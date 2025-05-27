@@ -216,7 +216,7 @@ const filteredFlows = computed(() =>
 
         <div class="p-6 h-full overflow-hidden flex flex-col">
             <div class="mb-6">
-                <h1 class="text-2xl font-bold text-gray-900 mb-4">API Collection</h1>
+                <h1 class="text-2xl font-bold text-gray-900 mb-4">Collections</h1>
                 <div class="relative">
                     <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" :size="20" />
                     <input v-model="searchTerm" type="text" placeholder="Search endpoints or flows..."
@@ -231,7 +231,6 @@ const filteredFlows = computed(() =>
                     <component :is="isEndpointFolderExpanded ? ChevronDown : ChevronRight" :size="18" />
                     <component :is="isEndpointFolderExpanded ? FolderOpen : Folder" :size="18" class="text-blue-500" />
                     <span class="font-semibold text-gray-800">Endpoints</span>
-                    <span class="text-sm text-gray-500">({{ filteredEndpoints.length }})</span>
                 </div>
 
                 <div v-if="isEndpointFolderExpanded" ref="endpointScrollContainer" class="p-4 overflow-y-auto flex-1"
@@ -258,7 +257,6 @@ const filteredFlows = computed(() =>
                     <component :is="isFlowFolderExpanded ? ChevronDown : ChevronRight" :size="18" />
                     <component :is="isFlowFolderExpanded ? FolderOpen : Folder" :size="18" class="text-green-600" />
                     <span class="font-semibold text-gray-800">Flows</span>
-                    <span class="text-sm text-gray-500">({{ filteredFlows.length }})</span>
                 </div>
 
                 <div v-if="isFlowFolderExpanded" ref="flowScrollContainer" class="p-4 overflow-y-auto flex-1"
