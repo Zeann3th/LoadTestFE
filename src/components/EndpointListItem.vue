@@ -1,34 +1,47 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { ChevronDown, ChevronRight } from 'lucide-vue-next';
-import { Endpoint } from '../types';
+import { Endpoint, HttpMethod, methodColors } from '../types';
 
 interface Props {
     endpoint: Endpoint;
     index: number;
 }
 
-const methodColors: Record<string, string> = {
-    GET: 'bg-green-100 text-green-800 border-green-300',
-    POST: 'bg-blue-100 text-blue-800 border-blue-300',
-    PUT: 'bg-orange-100 text-orange-800 border-orange-300',
-    DELETE: 'bg-red-100 text-red-800 border-red-300',
-    PATCH: 'bg-purple-100 text-purple-800 border-purple-300',
-    OPTIONS: 'bg-gray-100 text-gray-800 border-gray-300',
-    HEAD: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-};
-
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const isExpanded = ref(false);
+const isDraggedOver = ref(false);
 
 function toggleExpanded() {
     isExpanded.value = !isExpanded.value;
 }
+
+const onDragStart = (event: DragEvent) => {
+    if (event.dataTransfer) {
+        event.dataTransfer.setData('application/json', JSON.stringify({
+            type: 'endpoint',
+            data: props.endpoint
+        }));
+        event.dataTransfer.effectAllowed = 'copy';
+    }
+}
+
+const cleanedUrl = computed(() => {
+    return props.endpoint.url
+        .replace(/{{[^{}]*}}/, '')
+        .replace(/^https?:\/\/[^/]+/, '');
+});
+
+const onDragEnd = () => {
+    isDraggedOver.value = false;
+}
 </script>
 
 <template>
-    <div class="border border-gray-200 rounded-lg mb-2 bg-white shadow-sm">
+    <div class="border border-gray-200 rounded-lg mb-2 bg-white shadow-sm transition-all duration-200"
+        :class="{ 'opacity-50 transform scale-95': isDraggedOver }" draggable="true" @dragstart="onDragStart"
+        @dragend="onDragEnd">
         <!-- Header Row -->
         <div class="p-3 cursor-pointer hover:bg-gray-50 flex items-center justify-between" @click="toggleExpanded">
             <div class="flex items-center space-x-3 flex-1 overflow-hidden">
@@ -41,9 +54,13 @@ function toggleExpanded() {
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center space-x-2 overflow-hidden">
                         <span class="font-medium text-gray-900 truncate">{{ endpoint.name }}</span>
-                        <span class="text-sm text-gray-500 font-mono truncate max-w-[250px]">{{ endpoint.url }}</span>
+                        <span class="text-sm text-gray-500 font-mono truncate max-w-[250px]">{{ cleanedUrl }}</span>
                     </div>
                 </div>
+            </div>
+            <!-- Drag handle indicator -->
+            <div class="text-gray-400 text-xs opacity-60">
+                ⋮⋮
             </div>
         </div>
 
@@ -115,4 +132,13 @@ function toggleExpanded() {
     </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+/* Add drag cursor when hovering over draggable items */
+[draggable="true"] {
+    cursor: grab;
+}
+
+[draggable="true"]:active {
+    cursor: grabbing;
+}
+</style>

@@ -204,16 +204,6 @@ const filteredFlows = computed(() =>
         :class="{ 'bg-gray-200 ring-2 ring-blue-400': isDragging }" @dragover="onDragOver" @dragenter="onDragEnter"
         @dragleave="onDragLeave" @drop="onDrop">
 
-        <!-- Drag overlay -->
-        <div v-if="isDragging"
-            class="absolute inset-0 bg-blue-600 bg-opacity-40 flex items-center justify-center pointer-events-none border-2 border-dashed border-blue-400 z-50">
-            <div class="text-center">
-                <Upload class="mx-auto mb-4 text-white" :size="48" />
-                <p class="text-white text-xl font-bold mb-2">Drop file to upload</p>
-                <p class="text-blue-100 text-sm">Release to upload your file</p>
-            </div>
-        </div>
-
         <div class="p-6 h-full overflow-hidden flex flex-col">
             <div class="mb-6">
                 <h1 class="text-2xl font-bold text-gray-900 mb-4">Collections</h1>
