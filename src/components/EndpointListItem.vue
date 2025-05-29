@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref, computed } from 'vue';
 import { ChevronDown, ChevronRight } from 'lucide-vue-next';
-import { Endpoint, HttpMethod, methodColors } from '../types';
+import { Endpoint, methodColors } from '../types';
 
 interface Props {
     endpoint: Endpoint;

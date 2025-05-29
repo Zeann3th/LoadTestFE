@@ -1,17 +1,106 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
-import { X, Move } from 'lucide-vue-next';
-import { Endpoint, CanvasEndpoint, methodColors } from '../types';
+import { ref, computed, watch } from 'vue';
+import { Connection, Position, VueFlow, useVueFlow } from '@vue-flow/core';
+import { Controls } from '@vue-flow/controls';
+import { Background } from '@vue-flow/background';
+import { Endpoint, CanvasEndpoint, VueFlowNode, VueFlowEdge } from '../types';
 
-defineProps<{
+import '@vue-flow/core/dist/style.css';
+import '@vue-flow/core/dist/theme-default.css';
+import '@vue-flow/controls/dist/style.css';
+import CanvasNode from './CanvasNode.vue';
+import { fetch } from '@tauri-apps/plugin-http';
+import { debounce } from '../utils';
+
+const props = defineProps<{
     flowId: string | null;
 }>();
 
 const canvasEndpoints = ref<CanvasEndpoint[]>([]);
 const isDragOver = ref(false);
-const draggedEndpoint = ref<CanvasEndpoint | null>(null);
-const dragOffset = ref({ x: 0, y: 0 });
-const isActivelyDragging = ref(false);
+
+const { onConnect, addNodes, removeNodes, addEdges, project } = useVueFlow();
+
+const nodes = ref<VueFlowNode[]>([]);
+const edges = ref<VueFlowEdge[]>([]);
+
+const connectionSequence = computed<string[]>(() => {
+    if (nodes.value.length === 0 || edges.value.length === 0) return [];
+
+    const inDegree = new Map<string, number>();
+    const outEdges = new Map<string, string[]>();
+
+    nodes.value.forEach(node => {
+        inDegree.set(node.id, 0);
+        outEdges.set(node.id, []);
+    });
+
+    edges.value.forEach(edge => {
+        inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+        outEdges.get(edge.source)?.push(edge.target);
+    });
+
+    const queue: string[] = [];
+    const result: string[] = [];
+
+    inDegree.forEach((degree, nodeId) => {
+        if (degree === 0) queue.push(nodeId);
+    });
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+        if (current) {
+            result.push(current);
+            const neighbors = outEdges.get(current) || [];
+            neighbors.forEach(neighbor => {
+                inDegree.set(neighbor, (inDegree.get(neighbor) || 1) - 1);
+                if (inDegree.get(neighbor) === 0) {
+                    queue.push(neighbor);
+                }
+            });
+        }
+    }
+
+    return result;
+});
+
+async function saveSequence(sequence: string[]) {
+    try {
+        await fetch(`http://localhost:31347/v1/flows/${props.flowId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ sequence }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+    } catch (err) {
+        console.error('Failed to save execution order:', err);
+    }
+}
+
+const debouncedSaveOrder = debounce((order: string[]) => {
+    saveSequence(order);
+}, 1000);
+
+watch(connectionSequence, (newOrder) => {
+    console.log('Connection order updated:', newOrder);
+    if (newOrder.length > 0) {
+        debouncedSaveOrder([...newOrder]);
+    }
+});
+
+onConnect((connection: Connection) => {
+    console.log('New connection:', connection);
+    const newEdge: VueFlowEdge = {
+        id: `edge-${connection.source}-${connection.target}`,
+        source: connection.source,
+        target: connection.target,
+        type: 'smoothstep',
+        animated: true,
+        style: { stroke: '#3b82f6', strokeWidth: 2 }
+    };
+    addEdges([newEdge]);
+});
 
 function onCanvasDragOver(event: DragEvent) {
     event.preventDefault();
@@ -23,13 +112,12 @@ function onCanvasDragLeave(event: DragEvent) {
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     const x = event.clientX;
     const y = event.clientY;
-
     if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
         isDragOver.value = false;
     }
 }
 
-function onCanvasDrop(event: DragEvent) {
+const onCanvasDrop = (event: DragEvent) => {
     event.preventDefault();
     isDragOver.value = false;
 
@@ -40,53 +128,40 @@ function onCanvasDrop(event: DragEvent) {
         const dragData = JSON.parse(data);
         if (dragData.type === 'endpoint') {
             const endpoint = dragData.data as Endpoint;
-            const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+            const canvasElement = event.currentTarget as HTMLElement;
+            const canvasRect = canvasElement.getBoundingClientRect();
+            const canvasX = event.clientX - canvasRect.left;
+            const canvasY = event.clientY - canvasRect.top;
+            const flowPosition = project({ x: canvasX, y: canvasY });
 
             const newCanvasEndpoint: CanvasEndpoint = {
                 ...endpoint,
                 canvasId: `canvas-${endpoint.id}-${Date.now()}`,
-                x: event.clientX - rect.left - 150,
-                y: event.clientY - rect.top - 75,
+                x: flowPosition.x,
+                y: flowPosition.y,
                 width: 300,
                 height: 150
             };
 
             canvasEndpoints.value.push(newCanvasEndpoint);
+
+            const newNode: VueFlowNode = {
+                id: newCanvasEndpoint.canvasId,
+                type: 'endpoint',
+                position: { x: flowPosition.x, y: flowPosition.y },
+                data: {
+                    endpoint: newCanvasEndpoint,
+                    onDelete: () => removeEndpoint(newCanvasEndpoint.canvasId)
+                },
+                sourcePosition: Position.Right,
+                targetPosition: Position.Left
+            };
+
+            addNodes([newNode]);
         }
     } catch (error) {
         console.error('Error parsing drag data:', error);
     }
-}
-
-function onEndpointMouseDown(event: MouseEvent, endpoint: CanvasEndpoint) {
-    if ((event.target as HTMLElement).closest('.delete-btn')) return;
-
-    draggedEndpoint.value = endpoint;
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    dragOffset.value = {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top
-    };
-
-    event.preventDefault();
-}
-
-function onMouseMove(event: MouseEvent) {
-    if (!draggedEndpoint.value) return;
-
-    const canvas = document.querySelector('.canvas-container') as HTMLElement;
-    const canvasRect = canvas.getBoundingClientRect();
-
-    draggedEndpoint.value.x = event.clientX - canvasRect.left - dragOffset.value.x;
-    draggedEndpoint.value.y = event.clientY - canvasRect.top - dragOffset.value.y;
-
-    draggedEndpoint.value.x = Math.max(0, Math.min(draggedEndpoint.value.x, canvasRect.width - draggedEndpoint.value.width));
-    draggedEndpoint.value.y = Math.max(0, Math.min(draggedEndpoint.value.y, canvasRect.height - draggedEndpoint.value.height));
-}
-
-function onMouseUp() {
-    draggedEndpoint.value = null;
-    dragOffset.value = { x: 0, y: 0 };
 }
 
 function removeEndpoint(canvasId: string) {
@@ -94,22 +169,24 @@ function removeEndpoint(canvasId: string) {
     if (index > -1) {
         canvasEndpoints.value.splice(index, 1);
     }
+    removeNodes([canvasId]);
 }
 
-document.addEventListener('mousemove', onMouseMove);
-document.addEventListener('mouseup', onMouseUp);
+const nodeTypes = {
+    endpoint: CanvasNode
+};
 </script>
 
 <template>
     <div class="h-full bg-gray-50 relative overflow-hidden">
-        <!-- Canvas Area -->
-        <div class="canvas-container w-full h-full relative grid-background" :class="{
-            'drag-over-background': isDragOver,
-            'grid-background-active': isDragOver
-        }" @dragover="onCanvasDragOver" @dragleave="onCanvasDragLeave" @drop="onCanvasDrop">
+        <VueFlow v-model:nodes="nodes" v-model:edges="edges" :node-types="nodeTypes" class="vue-flow-container"
+            :default-viewport="{ zoom: 1 }" :default-edge-options="{ type: 'smoothstep', animated: true }"
+            fit-view-on-init @dragover="onCanvasDragOver" @dragleave="onCanvasDragLeave" @drop="onCanvasDrop">
 
-            <!-- Drop Zone Indicator -->
-            <div v-if="isDragOver && canvasEndpoints.length === 0"
+            <Background pattern-color="#e5e7eb" :gap="40" variant="lines" :class="{ 'bg-blue-50': isDragOver }" />
+            <Controls position="bottom-right" />
+
+            <div v-if="isDragOver && nodes.length === 0"
                 class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                 <div class="text-center">
                     <div class="text-6xl mb-4">📋</div>
@@ -118,157 +195,87 @@ document.addEventListener('mouseup', onMouseUp);
                 </div>
             </div>
 
-            <!-- Flow Selection Message -->
-            <div v-if="!flowId && canvasEndpoints.length === 0 && !isDragOver"
-                class="absolute inset-0 flex items-center justify-center">
+            <div v-if="!flowId && nodes.length === 0 && !isDragOver"
+                class="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div class="text-center text-gray-500">
                     <div class="text-6xl mb-4">🎨</div>
                     <h2 class="text-2xl font-semibold mb-2">Canvas Ready</h2>
                     <p class="text-lg">Drag endpoints from the sidebar to start building your flow</p>
                 </div>
             </div>
+        </VueFlow>
 
-            <!-- Canvas Endpoints -->
-            <div v-for="endpoint in canvasEndpoints" :key="endpoint.canvasId"
-                class="absolute bg-white rounded-lg shadow-lg border-2 border-gray-200 cursor-move hover:shadow-xl select-none"
-                :class="{
-                    'border-blue-400 shadow-2xl z-50 endpoint-dragging': draggedEndpoint?.canvasId === endpoint.canvasId,
-                    'hover:border-gray-300 transition-shadow duration-200': draggedEndpoint?.canvasId !== endpoint.canvasId,
-                    'transition-none': isActivelyDragging
-                }" :style="{
-                    left: endpoint.x + 'px',
-                    top: endpoint.y + 'px',
-                    width: endpoint.width + 'px',
-                    minHeight: endpoint.height + 'px',
-                    transform: draggedEndpoint?.canvasId === endpoint.canvasId ? 'scale(1.02)' : 'scale(1)',
-                    transition: draggedEndpoint?.canvasId === endpoint.canvasId ? 'none' : 'transform 0.2s ease'
-                }" @mousedown="onEndpointMouseDown($event, endpoint)">
-                <!-- Header -->
-                <div class="p-3 border-b border-gray-200 flex items-center justify-between bg-gray-50 rounded-t-lg">
-                    <div class="flex items-center space-x-2">
-                        <Move :size="16" class="text-gray-400" />
-                        <span
-                            :class="`px-2 py-1 text-xs font-semibold rounded border ${methodColors[endpoint.method]}`">
-                            {{ endpoint.method }}
-                        </span>
-                    </div>
-                    <button @click="removeEndpoint(endpoint.canvasId)"
-                        class="delete-btn p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
-                        <X :size="16" />
-                    </button>
-                </div>
-
-                <!-- Content -->
-                <div class="p-3 space-y-2">
-                    <div>
-                        <h3 class="font-semibold text-gray-900 text-sm truncate">{{ endpoint.name }}</h3>
-                        <p class="text-xs text-gray-500 font-mono truncate">{{ endpoint.url }}</p>
-                    </div>
-
-                    <div v-if="endpoint.description" class="text-xs text-gray-600 line-clamp-2">
-                        {{ endpoint.description }}
-                    </div>
-
-                    <!-- Quick Info -->
-                    <div class="flex flex-wrap gap-1 mt-2">
-                        <span v-if="endpoint.parameters && Object.keys(endpoint.parameters).length > 0"
-                            class="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded">
-                            {{ Object.keys(endpoint.parameters).length }} Params
-                        </span>
-                        <span v-if="endpoint.headers && Object.keys(endpoint.headers).length > 0"
-                            class="px-2 py-1 bg-green-50 text-green-700 text-xs rounded">
-                            {{ Object.keys(endpoint.headers).length }} Headers
-                        </span>
-                        <span v-if="endpoint.body && Object.keys(endpoint.body).length > 0"
-                            class="px-2 py-1 bg-yellow-50 text-yellow-700 text-xs rounded">
-                            Body
-                        </span>
-                    </div>
+        <!-- ✅ Show only if edges exist -->
+        <div v-if="edges.length > 0 && connectionSequence.length > 0"
+            class="absolute top-4 left-4 bg-white p-3 rounded-lg shadow-lg border max-w-xs z-20">
+            <h4 class="font-semibold text-sm mb-2 flex items-center">
+                🔗 Execution Order:
+            </h4>
+            <div class="space-y-1 max-h-48 overflow-y-auto">
+                <div v-for="(nodeId, index) in connectionSequence" :key="nodeId"
+                    class="text-xs flex items-center space-x-2">
+                    <span class="font-mono text-gray-600 bg-gray-100 px-1 rounded">{{ index + 1 }}</span>
+                    <span class="truncate">
+                        {{canvasEndpoints.find(ep => ep.canvasId === nodeId)?.name || 'Unknown'}}
+                    </span>
                 </div>
             </div>
+        </div>
+
+        <div v-if="nodes.length > 1 && edges.length === 0"
+            class="absolute top-4 right-4 bg-blue-50 border border-blue-200 rounded-lg p-3 max-w-xs z-20">
+            <p class="text-blue-800 text-sm">
+                💡 <strong>Tip:</strong> Drag from the small circles on the right side of nodes to the left side of
+                other nodes to create connections!
+            </p>
         </div>
     </div>
 </template>
 
 <style scoped>
-.line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.canvas-container {
-    user-select: none;
-    overflow: hidden;
-}
-
-.cursor-move:active {
-    cursor: grabbing !important;
-}
-
-.canvas-container * {
-    pointer-events: auto;
-}
-
-.canvas-container .endpoint-dragging {
-    pointer-events: none;
-    will-change: transform;
-}
-
-.grid-background {
-    background-image:
-        linear-gradient(rgba(156, 163, 175, 0.15) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(156, 163, 175, 0.15) 1px, transparent 1px);
-    background-size: 40px 40px;
-    background-color: #f9fafb;
-    transition: all 0.3s ease;
-}
-
-.grid-background-active {
-    background-image:
-        linear-gradient(rgba(59, 130, 246, 0.25) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(59, 130, 246, 0.25) 1px, transparent 1px);
-    background-size: 40px 40px;
-    background-color: #eff6ff;
-}
-
-.drag-over-background {
-    border: 2px dashed rgba(59, 130, 246, 0.5);
-    animation: pulse-border 2s infinite;
-}
-
-@keyframes pulse-border {
-
-    0%,
-    100% {
-        border-color: rgba(59, 130, 246, 0.5);
-    }
-
-    50% {
-        border-color: rgba(59, 130, 246, 0.8);
-    }
-}
-
-.grid-background::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
+.vue-flow-container {
     height: 100%;
-    background-image:
-        radial-gradient(circle at 40px 40px, rgba(156, 163, 175, 0.2) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    opacity: 0.4;
+    width: 100%;
 }
 
-.grid-background-active::before {
-    background-image:
-        radial-gradient(circle at 40px 40px, rgba(59, 130, 246, 0.3) 1px, transparent 1px);
-    background-size: 40px 40px;
-    opacity: 0.6;
+:deep(.vue-flow__handle) {
+    width: 12px;
+    height: 12px;
+    border: 2px solid #3b82f6;
+    background: white;
+}
+
+:deep(.vue-flow__handle-right) {
+    right: -6px;
+}
+
+:deep(.vue-flow__handle-left) {
+    left: -6px;
+}
+
+:deep(.vue-flow__handle:hover) {
+    background: #3b82f6;
+    transform: scale(1.2);
+}
+
+:deep(.vue-flow__edge) {
+    stroke-width: 2px;
+}
+
+:deep(.vue-flow__edge.selected) {
+    stroke-width: 3px;
+}
+
+:deep(.vue-flow__controls) {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.vue-flow__minimap) {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
 }
 </style>

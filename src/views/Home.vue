@@ -1,66 +1,109 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
-import Sidebar from '../components/Sidebar.vue';
-import Canvas from '../components/Canvas.vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { Search } from 'lucide-vue-next';
+import { Flow } from '../types';
+import { fetch } from '@tauri-apps/plugin-http';
+import FlowListItem from '../components/FlowListItem.vue';
+import { useRouter } from 'vue-router';
 
-const isSidebarCollapsed = ref(false);
-const sidebarWidth = ref(500);
-const isResizing = ref(false);
+const flows = ref<Flow[]>([]);
+const searchTerm = ref('');
+const flowScrollContainer = ref<HTMLElement | null>(null);
 
-const selectedFlowId = ref<string | null>(null);
+const flowPage = ref(1);
+const limit = 20;
+const flowTotalPages = ref(1);
+const loadingFlows = ref(false);
 
-const handleFlowSelection = (id: string) => {
-  selectedFlowId.value = id;
+const router = useRouter();
+
+const fetchFlows = async (isInitial = false) => {
+    if (loadingFlows.value || flowPage.value > flowTotalPages.value) return;
+    loadingFlows.value = true;
+
+    try {
+        const res = await fetch(`http://localhost:31347/v1/flows?page=${flowPage.value}&limit=${limit}`, {
+            method: 'GET',
+        });
+        const json = await res.json();
+
+        if (isInitial) {
+            flows.value = json.data;
+        } else {
+            flows.value.push(...json.data);
+        }
+
+        flowTotalPages.value = json.total;
+        flowPage.value += 1;
+    } catch (err) {
+        console.error('Error fetching flows:', err);
+    } finally {
+        loadingFlows.value = false;
+    }
 };
 
-const toggleSidebar = () => {
-  isSidebarCollapsed.value = !isSidebarCollapsed.value;
+const handleFlowScroll = () => {
+    const el = flowScrollContainer.value;
+    if (!el) return;
+
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
+        if (flowPage.value <= flowTotalPages.value && !loadingFlows.value) {
+            fetchFlows();
+        }
+    }
 };
 
-const startResize = (e: MouseEvent) => {
-  isResizing.value = true;
-  e.preventDefault();
-};
+onMounted(() => {
+    fetchFlows(true);
+    if (flowScrollContainer.value) {
+        flowScrollContainer.value.addEventListener('scroll', handleFlowScroll);
+    }
+});
 
-const stopResize = () => {
-  isResizing.value = false;
-};
+onBeforeUnmount(() => {
+    if (flowScrollContainer.value) {
+        flowScrollContainer.value.removeEventListener('scroll', handleFlowScroll);
+    }
+});
 
-const onResize = (e: MouseEvent) => {
-  if (!isResizing.value) return;
-  const newWidth = e.clientX;
-  if (newWidth > 500 && newWidth < 900) {
-    sidebarWidth.value = newWidth;
-  }
-};
+const filteredFlows = computed(() =>
+    flows.value.filter(flow =>
+        flow.name.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
+        flow.description.toLowerCase().includes(searchTerm.value.toLowerCase())
+    )
+);
 
-window.addEventListener('mouseup', stopResize);
-window.addEventListener('mousemove', onResize);
+function onFlowClick(flow: Flow) {
+    router.push({ path: `/workspace/${flow.id}` });
+}
 </script>
 
 <template>
-  <div class="flex h-screen overflow-hidden">
-    <!-- Sidebar -->
-    <div v-if="!isSidebarCollapsed" class="h-full bg-gray-800 text-white relative"
-      :style="{ width: sidebarWidth + 'px', minWidth: '150px', maxWidth: '600px' }">
-      <Sidebar @flow-selected="handleFlowSelection" />
+    <div class="h-full flex flex-col p-6 bg-white rounded shadow">
+        <h1 class="text-3xl font-bold mb-6">Flows</h1>
 
-      <!-- Drag handle -->
-      <div class="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-gray-600 transition-colors"
-        @mousedown="startResize"></div>
+        <div class="relative mb-4 w-full max-w-md">
+            <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" :size="20" />
+            <input v-model="searchTerm" type="text" placeholder="Search flows..."
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div ref="flowScrollContainer" class="overflow-y-auto flex-1 border border-gray-200 rounded p-4"
+            style="max-height: 600px;">
+            <div v-if="filteredFlows.length === 0 && !loadingFlows" class="text-center py-8 text-gray-500">
+                No flows found matching your search.
+            </div>
+
+            <div v-for="(flow, index) in filteredFlows" :key="flow.id"
+                class="mb-2 cursor-pointer hover:bg-gray-100 rounded transition-colors" @click="onFlowClick(flow)">
+                <FlowListItem :flow="flow" :index="index" />
+            </div>
+
+            <div v-if="loadingFlows" class="text-center text-gray-500 text-sm py-4">
+                Loading...
+            </div>
+        </div>
     </div>
-
-    <!-- Canvas -->
-    <div class="flex-1 h-full overflow-auto">
-      <Canvas :flowId="selectedFlowId" />
-    </div>
-
-    <!-- Floating Toggle Button -->
-    <button @click="toggleSidebar"
-      class="fixed bottom-4 left-4 z-50 bg-white border border-gray-300 shadow-lg px-4 py-2 rounded-full text-sm hover:bg-gray-100 transition-all duration-200 font-medium">
-      {{ isSidebarCollapsed ? '☰ Open Menu' : '✕ Close Menu' }}
-    </button>
-  </div>
 </template>
 
 <style scoped></style>

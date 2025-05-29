@@ -1,44 +1,32 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import {
-    Search, ChevronDown, ChevronRight, Folder, FolderOpen, Upload
+    Search, ChevronDown, ChevronRight, Folder, FolderOpen
 } from 'lucide-vue-next';
-import { Endpoint, Flow } from '../types';
+import { Endpoint } from '../types';
 import { fetch } from '@tauri-apps/plugin-http';
 import EndpointListItem from './EndpointListItem.vue';
-import FlowListItem from './FlowListItem.vue';
 
 const endpoints = ref<Endpoint[]>([]);
-const flows = ref<Flow[]>([]);
 const searchTerm = ref('');
-const isEndpointFolderExpanded = ref(false);
-const isFlowFolderExpanded = ref(false);
+const isFolderExpanded = ref(false);
 
-const endpointScrollContainer = ref<HTMLElement | null>(null);
-const flowScrollContainer = ref<HTMLElement | null>(null);
+const scrollContainer = ref<HTMLElement | null>(null);
 
 const isDragging = ref(false);
 
-const endpointPage = ref(1);
-const flowPage = ref(1);
+const page = ref(1);
 const limit = 20;
+const totalPages = ref(1);
 
-const endpointTotalPages = ref(1);
-const flowTotalPages = ref(1);
-
-const loadingEndpoints = ref(false);
-const loadingFlows = ref(false);
-
-const emit = defineEmits<{
-    (e: 'flowSelected', id: string): void;
-}>();
+const loading = ref(false);
 
 const fetchEndpoints = async (isInitial = false) => {
-    if (loadingEndpoints.value || endpointPage.value > endpointTotalPages.value) return;
-    loadingEndpoints.value = true;
+    if (loading.value || page.value > totalPages.value) return;
+    loading.value = true;
 
     try {
-        const res = await fetch(`http://localhost:31347/v1/endpoints?page=${endpointPage.value}&limit=${limit}`, {
+        const res = await fetch(`http://localhost:31347/v1/endpoints?page=${page.value}&limit=${limit}`, {
             method: 'GET',
         });
         const json = await res.json();
@@ -49,67 +37,28 @@ const fetchEndpoints = async (isInitial = false) => {
             endpoints.value.push(...json.data);
         }
 
-        endpointTotalPages.value = json.total;
+        totalPages.value = json.total;
 
-        endpointPage.value += 1;
+        page.value += 1;
 
     } catch (err) {
         console.error('Error fetching endpoints:', err);
     } finally {
-        loadingEndpoints.value = false;
+        loading.value = false;
     }
 };
 
-const fetchFlows = async (isInitial = false) => {
-    if (loadingFlows.value || flowPage.value > flowTotalPages.value) return;
-    loadingFlows.value = true;
-
-    try {
-        const res = await fetch(`http://localhost:31347/v1/flows?page=${flowPage.value}&limit=${limit}`, {
-            method: 'GET',
-        });
-        const json = await res.json();
-
-        if (isInitial) {
-            flows.value = json.data;
-        } else {
-            flows.value.push(...json.data);
-        }
-
-        flowTotalPages.value = json.total;
-
-        flowPage.value += 1;
-
-    } catch (err) {
-        console.error('Error fetching flows:', err);
-    } finally {
-        loadingFlows.value = false;
-    }
-};
-
-const handleEndpointScroll = () => {
-    const el = endpointScrollContainer.value;
+const handleScroll = () => {
+    const el = scrollContainer.value;
     if (!el) return;
 
     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
-        if (endpointPage.value <= endpointTotalPages.value && !loadingEndpoints.value) {
+        if (page.value <= totalPages.value && !loading.value) {
             fetchEndpoints();
         }
     }
 };
 
-const handleFlowScroll = () => {
-    const el = flowScrollContainer.value;
-    if (!el) return;
-
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
-        if (flowPage.value <= flowTotalPages.value && !loadingFlows.value) {
-            fetchFlows();
-        }
-    }
-};
-
-// Drag and Drop Handlers
 const onDragOver = (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -150,7 +99,7 @@ const onDrop = async (e: DragEvent) => {
 
         if (response.ok) {
             alert(`File "${file.name}" uploaded successfully!`);
-            endpointPage.value = 1;
+            page.value = 1;
             await fetchEndpoints(true);
         } else {
             alert(`Upload failed with status: ${response.status}`);
@@ -163,22 +112,15 @@ const onDrop = async (e: DragEvent) => {
 
 onMounted(() => {
     fetchEndpoints(true);
-    fetchFlows(true);
 
-    if (endpointScrollContainer.value) {
-        endpointScrollContainer.value.addEventListener('scroll', handleEndpointScroll);
-    }
-    if (flowScrollContainer.value) {
-        flowScrollContainer.value.addEventListener('scroll', handleFlowScroll);
+    if (scrollContainer.value) {
+        scrollContainer.value.addEventListener('scroll', handleScroll);
     }
 });
 
 onBeforeUnmount(() => {
-    if (endpointScrollContainer.value) {
-        endpointScrollContainer.value.removeEventListener('scroll', handleEndpointScroll);
-    }
-    if (flowScrollContainer.value) {
-        flowScrollContainer.value.removeEventListener('scroll', handleFlowScroll);
+    if (scrollContainer.value) {
+        scrollContainer.value.removeEventListener('scroll', handleScroll);
     }
 });
 
@@ -188,13 +130,6 @@ const filteredEndpoints = computed(() =>
         endpoint.description.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
         endpoint.method.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
         endpoint.url.toLowerCase().includes(searchTerm.value.toLowerCase())
-    )
-);
-
-const filteredFlows = computed(() =>
-    flows.value.filter(flow =>
-        flow.name.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
-        flow.description.toLowerCase().includes(searchTerm.value.toLowerCase())
     )
 );
 </script>
@@ -217,16 +152,15 @@ const filteredFlows = computed(() =>
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden">
                 <!-- Endpoints Folder -->
                 <div class="p-4 cursor-pointer hover:bg-gray-50 flex items-center space-x-2 border-b border-gray-200"
-                    @click="isEndpointFolderExpanded = !isEndpointFolderExpanded">
-                    <component :is="isEndpointFolderExpanded ? ChevronDown : ChevronRight" :size="18" />
-                    <component :is="isEndpointFolderExpanded ? FolderOpen : Folder" :size="18" class="text-blue-500" />
+                    @click="isFolderExpanded = !isFolderExpanded">
+                    <component :is="isFolderExpanded ? ChevronDown : ChevronRight" :size="18" />
+                    <component :is="isFolderExpanded ? FolderOpen : Folder" :size="18" class="text-blue-500" />
                     <span class="font-semibold text-gray-800">Endpoints</span>
                 </div>
 
-                <div v-if="isEndpointFolderExpanded" ref="endpointScrollContainer" class="p-4 overflow-y-auto flex-1"
-                    @scroll="handleEndpointScroll">
-                    <div v-if="filteredEndpoints.length === 0 && !loadingEndpoints"
-                        class="text-center py-8 text-gray-500">
+                <div v-if="isFolderExpanded" ref="scrollContainer" class="p-4 overflow-y-auto flex-1"
+                    @scroll="handleScroll">
+                    <div v-if="filteredEndpoints.length === 0 && !loading" class="text-center py-8 text-gray-500">
                         <Search :size="24" class="mx-auto mb-2 text-gray-400" />
                         <p>No endpoints found matching your search.</p>
                     </div>
@@ -236,32 +170,7 @@ const filteredFlows = computed(() =>
                             :endpoint="endpoint" :index="index" />
                     </div>
 
-                    <div v-if="loadingEndpoints" class="text-center text-gray-500 text-sm py-4">
-                        Loading...
-                    </div>
-                </div>
-
-                <!-- Flows Folder -->
-                <div class="p-4 cursor-pointer hover:bg-gray-50 flex items-center space-x-2 border-b border-gray-200"
-                    @click="isFlowFolderExpanded = !isFlowFolderExpanded">
-                    <component :is="isFlowFolderExpanded ? ChevronDown : ChevronRight" :size="18" />
-                    <component :is="isFlowFolderExpanded ? FolderOpen : Folder" :size="18" class="text-green-600" />
-                    <span class="font-semibold text-gray-800">Flows</span>
-                </div>
-
-                <div v-if="isFlowFolderExpanded" ref="flowScrollContainer" class="p-4 overflow-y-auto flex-1"
-                    @scroll="handleFlowScroll">
-                    <div v-if="filteredFlows.length === 0 && !loadingFlows" class="text-center py-8 text-gray-500">
-                        <Search :size="24" class="mx-auto mb-2 text-gray-400" />
-                        <p>No flows found matching your search.</p>
-                    </div>
-
-                    <div v-for="(flow, index) in filteredFlows" :key="flow.id" @click="emit('flowSelected', flow.id)"
-                        class="cursor-pointer hover:bg-gray-100 rounded transition-colors">
-                        <FlowListItem :flow="flow" :index="index" />
-                    </div>
-
-                    <div v-if="loadingFlows" class="text-center text-gray-500 text-sm py-4">
+                    <div v-if="loading" class="text-center text-gray-500 text-sm py-4">
                         Loading...
                     </div>
                 </div>

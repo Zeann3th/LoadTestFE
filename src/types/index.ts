@@ -1,3 +1,5 @@
+import { Position } from '@vue-flow/core'
+
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS" | "HEAD"
 
 export interface Endpoint {
@@ -39,3 +41,28 @@ export const methodColors: Record<string, string> = {
     OPTIONS: 'bg-gray-100 text-gray-800 border-gray-300',
     HEAD: 'bg-yellow-100 text-yellow-800 border-yellow-300',
 };
+
+export interface VueFlowNode {
+    id: string;
+    type: string;
+    position: { x: number; y: number };
+    data: any;
+    sourcePosition?: Position;
+    targetPosition?: Position;
+}
+
+export interface VueFlowEdge {
+    id: string;
+    source: string;
+    target: string;
+    type?: string;
+    animated?: boolean;
+    style?: Record<string, any>;
+}
+
+export interface Connection {
+    source: string;
+    target: string;
+    sourceHandle?: string | null;
+    targetHandle?: string | null;
+}
