@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import Sidebar from '../components/Sidebar.vue';
 import Canvas from '../components/Canvas.vue';
+import Toolbar from '../components/Toolbar.vue';
 import { useRouter } from 'vue-router';
 
 const isSidebarCollapsed = ref(false);
@@ -56,22 +57,15 @@ window.addEventListener('mousemove', onResize);
       <Canvas :flowId="flowId" />
     </div>
 
+    <!-- Toolbar -->
+    <Toolbar @settings="" @play="" @home="router.push('/')" />
+
     <!-- Floating Toggle Button -->
     <div class="fixed bottom-4 left-4 z-50">
       <div class="relative">
-        <!-- Menu Toggle Button -->
-        <button @click="showMenu = !showMenu"
-          class="bg-white border border-gray-300 shadow-lg px-4 py-2 rounded-full text-sm hover:bg-gray-100 transition-all duration-200 font-medium whitespace-nowrap min-w-max">
-          ☰ Menu
-        </button>
-
         <!-- Dropdown Menu -->
-        <div v-if="showMenu"
-          class="absolute bottom-full mb-2 left-0 bg-white border border-gray-300 shadow-lg rounded-lg overflow-hidden text-sm whitespace-nowrap min-w-max">
-          <button @click="router.push('/')"
-            class="block w-full text-left px-4 py-2 hover:bg-gray-100 whitespace-nowrap min-w-max">
-            ← Go Back
-          </button>
+        <div
+          class="absolute bottom-full mb-2 left-0 bg-white border border-gray-300 shadow-lg rounded-full overflow-hidden text-sm whitespace-nowrap min-w-max">
           <button @click="toggleSidebar"
             class="block w-full text-left px-4 py-2 hover:bg-gray-100 whitespace-nowrap min-w-max">
             {{ isSidebarCollapsed ? '☰ Open Menu' : '✕ Close Menu' }}

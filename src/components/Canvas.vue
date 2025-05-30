@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, markRaw, onMounted } from 'vue';
 import { Connection, Position, VueFlow, useVueFlow } from '@vue-flow/core';
 import { Controls } from '@vue-flow/controls';
 import { Background } from '@vue-flow/background';
@@ -12,27 +12,51 @@ import CanvasNode from './CanvasNode.vue';
 import { fetch } from '@tauri-apps/plugin-http';
 import { debounce } from '../utils';
 
+// Define ActionNode interface locally since it extends Endpoint
+interface ActionNode extends Endpoint {
+    postProcessor?: Record<string, any>;
+}
+
+interface FlowDetail {
+    id: string;
+    name: string;
+    description: string;
+    sequence: ActionNode[];
+    createdAt: string;
+    updatedAt: string;
+}
+
 const props = defineProps<{
-    flowId: string | null;
+    flowId: string;
 }>();
 
 const canvasEndpoints = ref<CanvasEndpoint[]>([]);
 const isDragOver = ref(false);
+const isLoading = ref(false);
+const loadError = ref<string | null>(null);
 
 const { onConnect, addNodes, removeNodes, addEdges, project } = useVueFlow();
 
 const nodes = ref<VueFlowNode[]>([]);
 const edges = ref<VueFlowEdge[]>([]);
 
+const lastSavedSequence = ref<string>('');
+
 const connectionSequence = computed<string[]>(() => {
-    if (nodes.value.length === 0 || edges.value.length === 0) return [];
+    if (edges.value.length === 0) return [];
 
     const inDegree = new Map<string, number>();
     const outEdges = new Map<string, string[]>();
 
-    nodes.value.forEach(node => {
-        inDegree.set(node.id, 0);
-        outEdges.set(node.id, []);
+    const connectedNodeIds = new Set<string>();
+    edges.value.forEach(edge => {
+        connectedNodeIds.add(edge.source);
+        connectedNodeIds.add(edge.target);
+    });
+
+    connectedNodeIds.forEach(nodeId => {
+        inDegree.set(nodeId, 0);
+        outEdges.set(nodeId, []);
     });
 
     edges.value.forEach(edge => {
@@ -41,7 +65,7 @@ const connectionSequence = computed<string[]>(() => {
     });
 
     const queue: string[] = [];
-    const result: string[] = [];
+    const canvasIdSequence: string[] = [];
 
     inDegree.forEach((degree, nodeId) => {
         if (degree === 0) queue.push(nodeId);
@@ -50,7 +74,7 @@ const connectionSequence = computed<string[]>(() => {
     while (queue.length > 0) {
         const current = queue.shift();
         if (current) {
-            result.push(current);
+            canvasIdSequence.push(current);
             const neighbors = outEdges.get(current) || [];
             neighbors.forEach(neighbor => {
                 inDegree.set(neighbor, (inDegree.get(neighbor) || 1) - 1);
@@ -61,18 +85,116 @@ const connectionSequence = computed<string[]>(() => {
         }
     }
 
-    return result;
+    const endpointIdSequence = canvasIdSequence
+        .map(canvasId => {
+            const canvasEndpoint = canvasEndpoints.value.find(ep => ep.canvasId === canvasId);
+            return canvasEndpoint?.id;
+        })
+        .filter(Boolean) as string[];
+
+    return endpointIdSequence;
 });
+
+async function fetchFlowDetail(): Promise<FlowDetail | null> {
+    try {
+        isLoading.value = true;
+        loadError.value = null;
+
+        const res = await fetch(`http://localhost:31347/v1/flows/${props.flowId}`);
+
+        if (!res.ok) {
+            throw new Error(`Failed to fetch flow detail: ${res.status} ${res.statusText}`);
+        }
+
+        const flowDetail: FlowDetail = await res.json();
+        console.log('Fetched flow detail:', flowDetail);
+
+        return flowDetail;
+    } catch (err) {
+        console.error('Error fetching flow detail:', err);
+        loadError.value = err instanceof Error ? err.message : 'Unknown error occurred';
+        return null;
+    } finally {
+        isLoading.value = false;
+    }
+}
+
+function createCanvasFromSequence(sequence: ActionNode[]) {
+    const newCanvasEndpoints: CanvasEndpoint[] = [];
+    const newNodes: VueFlowNode[] = [];
+    const newEdges: VueFlowEdge[] = [];
+
+    sequence.forEach((actionNode, index) => {
+        const canvasId = `canvas-${actionNode.id}-${Date.now()}-${index}`;
+
+        const x = index * 350 + 100;
+        const y = 200;
+
+        const canvasEndpoint: CanvasEndpoint = {
+            ...actionNode,
+            canvasId,
+            x,
+            y,
+            width: 300,
+            height: 150
+        };
+
+        newCanvasEndpoints.push(canvasEndpoint);
+
+        const node: VueFlowNode = {
+            id: canvasId,
+            type: 'endpoint',
+            position: { x, y },
+            data: {
+                endpoint: canvasEndpoint,
+                onDelete: () => removeEndpoint(canvasId)
+            },
+            sourcePosition: Position.Right,
+            targetPosition: Position.Left
+        };
+
+        newNodes.push(node);
+
+        if (index < sequence.length - 1) {
+            const nextCanvasId = `canvas-${sequence[index + 1].id}-${Date.now()}-${index + 1}`;
+            const edge: VueFlowEdge = {
+                id: `edge-${canvasId}-${nextCanvasId}`,
+                source: canvasId,
+                target: nextCanvasId,
+                type: 'smoothstep',
+                animated: true,
+                style: { stroke: '#3b82f6', strokeWidth: 2 }
+            };
+
+            newEdges.push(edge);
+        }
+    });
+
+    canvasEndpoints.value = newCanvasEndpoints;
+    addNodes(newNodes);
+    addEdges(newEdges);
+
+    const endpointIds = sequence.map(node => node.id);
+    lastSavedSequence.value = JSON.stringify(endpointIds);
+}
 
 async function saveSequence(sequence: string[]) {
     try {
-        await fetch(`http://localhost:31347/v1/flows/${props.flowId}`, {
+        console.log('Saving endpoint sequence:', sequence);
+        const res = await fetch(`http://localhost:31347/v1/flows/${props.flowId}`, {
             method: 'PATCH',
             body: JSON.stringify({ sequence }),
             headers: {
                 'Content-Type': 'application/json'
             }
         });
+
+        if (res.ok) {
+            console.log('Sequence saved successfully:', await res.json());
+            lastSavedSequence.value = JSON.stringify(sequence);
+        } else {
+            console.error('Failed to save sequence:', res.status, await res.text());
+        }
     } catch (err) {
         console.error('Failed to save execution order:', err);
     }
@@ -80,17 +202,28 @@ async function saveSequence(sequence: string[]) {
 
 const debouncedSaveOrder = debounce((order: string[]) => {
     saveSequence(order);
-}, 1000);
+}, 800);
 
 watch(connectionSequence, (newOrder) => {
-    console.log('Connection order updated:', newOrder);
-    if (newOrder.length > 0) {
+    const newOrderString = JSON.stringify(newOrder);
+
+    if (newOrder.length > 0 && newOrderString !== lastSavedSequence.value) {
+        console.log('Connection order updated (endpoint IDs):', newOrder);
         debouncedSaveOrder([...newOrder]);
     }
+}, {
+    deep: true
 });
 
+watch(edges, (newEdges) => {
+    if (newEdges.length === 0 && lastSavedSequence.value !== '[]') {
+        console.log('All connections removed, clearing sequence');
+        lastSavedSequence.value = '[]';
+        debouncedSaveOrder([]);
+    }
+}, { deep: true });
+
 onConnect((connection: Connection) => {
-    console.log('New connection:', connection);
     const newEdge: VueFlowEdge = {
         id: `edge-${connection.source}-${connection.target}`,
         source: connection.source,
@@ -172,13 +305,43 @@ function removeEndpoint(canvasId: string) {
     removeNodes([canvasId]);
 }
 
-const nodeTypes = {
-    endpoint: CanvasNode
-};
+const nodeTypes = markRaw({
+    endpoint: markRaw(CanvasNode)
+});
+
+onMounted(async () => {
+    const flowDetail = await fetchFlowDetail();
+
+    if (flowDetail && flowDetail.sequence && flowDetail.sequence.length > 0) {
+        console.log('Loading flow with sequence:', flowDetail.sequence);
+        createCanvasFromSequence(flowDetail.sequence);
+    }
+});
+
 </script>
 
 <template>
     <div class="h-full bg-gray-50 relative overflow-hidden">
+        <!-- Loading indicator -->
+        <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-50">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p class="text-lg font-semibold text-gray-700">Loading flow...</p>
+            </div>
+        </div>
+
+        <!-- Error message -->
+        <div v-if="loadError"
+            class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-50 border border-red-200 rounded-lg p-4 max-w-md z-50">
+            <div class="flex items-center">
+                <div class="text-red-400 mr-3">⚠️</div>
+                <div>
+                    <h4 class="font-semibold text-red-800">Failed to load flow</h4>
+                    <p class="text-red-600 text-sm mt-1">{{ loadError }}</p>
+                </div>
+            </div>
+        </div>
+
         <VueFlow v-model:nodes="nodes" v-model:edges="edges" :node-types="nodeTypes" class="vue-flow-container"
             :default-viewport="{ zoom: 1 }" :default-edge-options="{ type: 'smoothstep', animated: true }"
             fit-view-on-init @dragover="onCanvasDragOver" @dragleave="onCanvasDragLeave" @drop="onCanvasDrop">
@@ -195,7 +358,7 @@ const nodeTypes = {
                 </div>
             </div>
 
-            <div v-if="!flowId && nodes.length === 0 && !isDragOver"
+            <div v-if="nodes.length === 0 && !isDragOver && !isLoading"
                 class="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div class="text-center text-gray-500">
                     <div class="text-6xl mb-4">🎨</div>
@@ -205,18 +368,17 @@ const nodeTypes = {
             </div>
         </VueFlow>
 
-        <!-- ✅ Show only if edges exist -->
         <div v-if="edges.length > 0 && connectionSequence.length > 0"
             class="absolute top-4 left-4 bg-white p-3 rounded-lg shadow-lg border max-w-xs z-20">
             <h4 class="font-semibold text-sm mb-2 flex items-center">
                 🔗 Execution Order:
             </h4>
             <div class="space-y-1 max-h-48 overflow-y-auto">
-                <div v-for="(nodeId, index) in connectionSequence" :key="nodeId"
+                <div v-for="(endpointId, index) in connectionSequence" :key="endpointId"
                     class="text-xs flex items-center space-x-2">
                     <span class="font-mono text-gray-600 bg-gray-100 px-1 rounded">{{ index + 1 }}</span>
                     <span class="truncate">
-                        {{canvasEndpoints.find(ep => ep.canvasId === nodeId)?.name || 'Unknown'}}
+                        {{canvasEndpoints.find(ep => ep.id === endpointId)?.name || 'Unknown'}}
                     </span>
                 </div>
             </div>

@@ -24,6 +24,19 @@ export interface Flow {
     updatedAt: string;
 }
 
+export interface ActionNode extends Endpoint {
+    postProcessor?: Record<string, any>;
+}
+
+export interface FlowDetail {
+    id: string;
+    name: string;
+    description: string;
+    sequence: ActionNode[];
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface CanvasEndpoint extends Endpoint {
     canvasId: string;
     x: number;

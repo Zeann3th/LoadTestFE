@@ -1,14 +1,31 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { Search } from 'lucide-vue-next';
+import { Search, Plus, Edit, Trash2 } from 'lucide-vue-next';
 import { Flow } from '../types';
 import { fetch } from '@tauri-apps/plugin-http';
 import FlowListItem from '../components/FlowListItem.vue';
+import FlowDialog from '../components/FlowDialog.vue';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
 import { useRouter } from 'vue-router';
+
+// shadcn-vue components
+import { Button } from '@/components/ui/button';
 
 const flows = ref<Flow[]>([]);
 const searchTerm = ref('');
 const flowScrollContainer = ref<HTMLElement | null>(null);
+
+// Dialog states
+const isCreateDialogOpen = ref(false);
+const isEditDialogOpen = ref(false);
+const isDeleteDialogOpen = ref(false);
+const currentEditingFlow = ref<Flow | null>(null);
+const flowToDelete = ref<Flow | null>(null);
+
+// Loading states
+const isCreatingFlow = ref(false);
+const isUpdatingFlow = ref(false);
+const isDeletingFlow = ref(false);
 
 const flowPage = ref(1);
 const limit = 20;
@@ -42,6 +59,95 @@ const fetchFlows = async (isInitial = false) => {
     }
 };
 
+const handleCreateFlow = async (data: { name: string; description: string }) => {
+    if (data.name.trim() === '' || data.description.trim() === '') return;
+
+    isCreatingFlow.value = true;
+    try {
+        const res = await fetch('http://localhost:31347/v1/flows', {
+            method: 'POST',
+            body: JSON.stringify({
+                name: data.name,
+                description: data.description
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (res.status === 201) {
+            const newFlow = await res.json();
+            flows.value.unshift(newFlow);
+            isCreateDialogOpen.value = false;
+        } else {
+            console.error('Failed to create flow:', res.statusText);
+        }
+    } catch (err) {
+        console.error('Error creating flow:', err);
+    } finally {
+        isCreatingFlow.value = false;
+    }
+};
+
+const handleEditFlow = async (data: { name: string; description: string }) => {
+    if (!currentEditingFlow.value) return;
+
+    const req = {
+        ...(data.name.trim() !== '' ? { name: data.name } : {}),
+        ...(data.description.trim() !== '' ? { description: data.description } : {})
+    };
+
+    isUpdatingFlow.value = true;
+    try {
+        const res = await fetch(`http://localhost:31347/v1/flows/${currentEditingFlow.value.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(req),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (res.status === 200) {
+            const updatedFlow = await res.json();
+            const index = flows.value.findIndex(f => f.id === updatedFlow.id);
+            if (index !== -1) {
+                flows.value[index] = updatedFlow;
+            }
+            currentEditingFlow.value = null;
+            isEditDialogOpen.value = false;
+        } else {
+            console.error('Failed to update flow:', res.statusText);
+        }
+    } catch (err) {
+        console.error('Error updating flow:', err);
+    } finally {
+        isUpdatingFlow.value = false;
+    }
+};
+
+const handleDeleteFlow = async () => {
+    if (!flowToDelete.value) return;
+
+    isDeletingFlow.value = true;
+    try {
+        const res = await fetch(`http://localhost:31347/v1/flows/${flowToDelete.value.id}`, {
+            method: 'DELETE'
+        });
+
+        if (res.status === 204) {
+            flows.value = flows.value.filter(f => f.id !== flowToDelete.value!.id);
+            flowToDelete.value = null;
+            isDeleteDialogOpen.value = false;
+        } else {
+            console.error('Failed to delete flow:', res.statusText);
+        }
+    } catch (err) {
+        console.error('Error deleting flow:', err);
+    } finally {
+        isDeletingFlow.value = false;
+    }
+};
+
 const handleFlowScroll = () => {
     const el = flowScrollContainer.value;
     if (!el) return;
@@ -51,6 +157,36 @@ const handleFlowScroll = () => {
             fetchFlows();
         }
     }
+};
+
+const openCreateDialog = () => {
+    currentEditingFlow.value = null;
+    isCreateDialogOpen.value = true;
+};
+
+const openEditDialog = (flowItem: Flow) => {
+    currentEditingFlow.value = flowItem;
+    isEditDialogOpen.value = true;
+};
+
+const openDeleteDialog = (flowItem: Flow) => {
+    flowToDelete.value = flowItem;
+    isDeleteDialogOpen.value = true;
+};
+
+const cancelCreateDialog = () => {
+    currentEditingFlow.value = null;
+    isCreateDialogOpen.value = false;
+};
+
+const cancelEditDialog = () => {
+    currentEditingFlow.value = null;
+    isEditDialogOpen.value = false;
+};
+
+const cancelDeleteDialog = () => {
+    flowToDelete.value = null;
+    isDeleteDialogOpen.value = false;
 };
 
 onMounted(() => {
@@ -79,7 +215,7 @@ function onFlowClick(flow: Flow) {
 </script>
 
 <template>
-    <div class="h-full flex flex-col p-6 bg-white rounded shadow">
+    <div class="h-full flex flex-col p-6 bg-white rounded shadow relative">
         <h1 class="text-3xl font-bold mb-6">Flows</h1>
 
         <div class="relative mb-4 w-full max-w-md">
@@ -95,14 +231,47 @@ function onFlowClick(flow: Flow) {
             </div>
 
             <div v-for="(flow, index) in filteredFlows" :key="flow.id"
-                class="mb-2 cursor-pointer hover:bg-gray-100 rounded transition-colors" @click="onFlowClick(flow)">
-                <FlowListItem :flow="flow" :index="index" />
+                class="mb-2 group hover:bg-gray-50 rounded transition-colors border border-gray-100 p-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1 cursor-pointer" @click="onFlowClick(flow)">
+                        <FlowListItem :flow="flow" :index="index" />
+                    </div>
+                    <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="sm" @click.stop="openEditDialog(flow)" class="h-8 w-8 p-0">
+                            <Edit class="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" @click.stop="openDeleteDialog(flow)"
+                            class="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50">
+                            <Trash2 class="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
             </div>
 
             <div v-if="loadingFlows" class="text-center text-gray-500 text-sm py-4">
                 Loading...
             </div>
         </div>
+
+        <!-- Floating Add Button -->
+        <Button @click="openCreateDialog"
+            class="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow z-50"
+            size="icon">
+            <Plus class="h-6 w-6" />
+        </Button>
+
+        <!-- Create Flow Dialog -->
+        <FlowDialog v-model:open="isCreateDialogOpen" :loading="isCreatingFlow" @submit="handleCreateFlow"
+            @cancel="cancelCreateDialog" />
+
+        <!-- Edit Flow Dialog -->
+        <FlowDialog v-model:open="isEditDialogOpen" :flow="currentEditingFlow" :loading="isUpdatingFlow"
+            @submit="handleEditFlow" @cancel="cancelEditDialog" />
+
+        <!-- Delete Confirmation Dialog -->
+        <ConfirmDialog v-model:open="isDeleteDialogOpen" :item-name="flowToDelete?.name" item-type="flow"
+            :loading="isDeletingFlow" description="This action cannot be undone." @confirm="handleDeleteFlow"
+            @cancel="cancelDeleteDialog" />
     </div>
 </template>
 

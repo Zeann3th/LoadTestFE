@@ -9,7 +9,7 @@ import EndpointListItem from './EndpointListItem.vue';
 
 const endpoints = ref<Endpoint[]>([]);
 const searchTerm = ref('');
-const isFolderExpanded = ref(false);
+const isFolderExpanded = ref(true);
 
 const scrollContainer = ref<HTMLElement | null>(null);
 
@@ -144,7 +144,7 @@ const filteredEndpoints = computed(() =>
                 <h1 class="text-2xl font-bold text-gray-900 mb-4">Collections</h1>
                 <div class="relative">
                     <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" :size="20" />
-                    <input v-model="searchTerm" type="text" placeholder="Search endpoints or flows..."
+                    <input v-model="searchTerm" type="text" placeholder="Search endpoints..."
                         class="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500" />
                 </div>
             </div>
