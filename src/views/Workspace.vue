@@ -5,12 +5,14 @@ import Canvas from '../components/Canvas.vue';
 import Toolbar from '../components/Toolbar.vue';
 import { useRouter } from 'vue-router';
 import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
+import RunDialog from '@/components/RunDialog.vue'
 
 const isSidebarCollapsed = ref(true);
 const sidebarWidth = ref(500);
 const isResizing = ref(false);
 const router = useRouter();
 const isToggling = ref(false);
+const showMenu = ref(false);
 
 defineProps<{
   flowId: string
@@ -50,6 +52,14 @@ const handleKeydown = (e: KeyboardEvent) => {
     e.stopPropagation();
     toggleSidebar();
   }
+};
+
+const openMenu = () => {
+  showMenu.value = true;
+};
+
+const closeMenu = () => {
+  showMenu.value = false;
 };
 
 onMounted(async () => {
@@ -94,7 +104,7 @@ onBeforeUnmount(async () => {
     </div>
 
     <!-- Toolbar -->
-    <Toolbar @settings="" @play="" @home="router.push('/')" />
+    <Toolbar @play="openMenu" @home="router.push('/')" />
 
     <!-- Floating Toggle Button -->
     <div class="fixed bottom-4 left-4 z-50">
@@ -109,6 +119,9 @@ onBeforeUnmount(async () => {
         </div>
       </div>
     </div>
+
+    <div v-if="showMenu" class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-all"></div>
+    <RunDialog :open="showMenu" :flowId="flowId" @close="closeMenu" @run="closeMenu" />
   </div>
 </template>
 

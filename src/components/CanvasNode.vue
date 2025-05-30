@@ -44,7 +44,7 @@ const savePostProcessor = async (script: string) => {
             },
             body: JSON.stringify({
                 sequence: props.data.executionIndex,
-                postProcessor: script.trim()
+                postProcessor: JSON.parse(script)
             })
         })
 

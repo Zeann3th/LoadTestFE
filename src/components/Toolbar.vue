@@ -1,6 +1,6 @@
 <!-- components/Toolbar.vue -->
 <script lang="ts" setup>
-import { defineEmits, onBeforeUnmount, onMounted } from 'vue';
+import { onBeforeUnmount, onMounted } from 'vue';
 import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
 const emit = defineEmits<{
     (e: 'play'): void;
