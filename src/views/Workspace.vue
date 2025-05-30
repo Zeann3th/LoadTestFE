@@ -6,7 +6,7 @@ import Toolbar from '../components/Toolbar.vue';
 import { useRouter } from 'vue-router';
 import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
 
-const isSidebarCollapsed = ref(false);
+const isSidebarCollapsed = ref(true);
 const sidebarWidth = ref(500);
 const isResizing = ref(false);
 const router = useRouter();

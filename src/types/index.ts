@@ -79,3 +79,11 @@ export interface Connection {
     sourceHandle?: string | null;
     targetHandle?: string | null;
 }
+
+export interface RunOptions {
+    ccu: number;
+    threads: number;
+    duration: number;
+    rampUpTime: number;
+    input: Record<string, any>;
+}
