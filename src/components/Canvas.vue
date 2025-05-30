@@ -3,7 +3,7 @@ import { ref, computed, watch, markRaw, onMounted } from 'vue';
 import { Connection, Position, VueFlow, useVueFlow } from '@vue-flow/core';
 import { Controls } from '@vue-flow/controls';
 import { Background } from '@vue-flow/background';
-import { Endpoint, CanvasEndpoint, VueFlowNode, VueFlowEdge } from '../types';
+import { Endpoint, CanvasEndpoint, VueFlowNode, VueFlowEdge, ActionNode, FlowDetail } from '../types';
 
 import '@vue-flow/core/dist/style.css';
 import '@vue-flow/core/dist/theme-default.css';
@@ -12,19 +12,6 @@ import CanvasNode from './CanvasNode.vue';
 import { fetch } from '@tauri-apps/plugin-http';
 import { debounce } from '../utils';
 
-// Define ActionNode interface locally since it extends Endpoint
-interface ActionNode extends Endpoint {
-    postProcessor?: Record<string, any>;
-}
-
-interface FlowDetail {
-    id: string;
-    name: string;
-    description: string;
-    sequence: ActionNode[];
-    createdAt: string;
-    updatedAt: string;
-}
 
 const props = defineProps<{
     flowId: string;

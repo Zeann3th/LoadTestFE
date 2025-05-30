@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { computed } from 'vue';
 
-// shadcn-vue components
 import {
     AlertDialog,
     AlertDialogAction,

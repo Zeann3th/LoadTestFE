@@ -1,22 +1,30 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import Sidebar from '../components/Sidebar.vue';
 import Canvas from '../components/Canvas.vue';
 import Toolbar from '../components/Toolbar.vue';
 import { useRouter } from 'vue-router';
+import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
 
 const isSidebarCollapsed = ref(false);
 const sidebarWidth = ref(500);
 const isResizing = ref(false);
 const router = useRouter();
-const showMenu = ref(false);
+const isToggling = ref(false);
 
 defineProps<{
   flowId: string
 }>();
 
-const toggleSidebar = () => {
+const toggleSidebar = async () => {
+  if (isToggling.value) return;
+
+  isToggling.value = true;
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
+
+  setTimeout(() => {
+    isToggling.value = false;
+  }, 100);
 };
 
 const startResize = (e: MouseEvent) => {
@@ -36,8 +44,37 @@ const onResize = (e: MouseEvent) => {
   }
 };
 
-window.addEventListener('mouseup', stopResize);
-window.addEventListener('mousemove', onResize);
+const handleKeydown = (e: KeyboardEvent) => {
+  if (e.shiftKey && e.key === '\\') {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleSidebar();
+  }
+};
+
+onMounted(async () => {
+  try {
+    await register('Shift+\\', toggleSidebar);
+  } catch (error) {
+    console.warn('Failed to register global shortcut:', error);
+    document.addEventListener('keydown', handleKeydown);
+  }
+
+  window.addEventListener('mouseup', stopResize);
+  window.addEventListener('mousemove', onResize);
+});
+
+onBeforeUnmount(async () => {
+  try {
+    await unregister('Shift+\\');
+  } catch (error) {
+    console.warn('Failed to unregister global shortcut:', error);
+  }
+
+  document.removeEventListener('keydown', handleKeydown);
+  window.removeEventListener('mouseup', stopResize);
+  window.removeEventListener('mousemove', onResize);
+});
 </script>
 
 <template>
@@ -46,7 +83,6 @@ window.addEventListener('mousemove', onResize);
     <div v-if="!isSidebarCollapsed" class="h-full bg-gray-800 text-white relative"
       :style="{ width: sidebarWidth + 'px', minWidth: '150px', maxWidth: '600px' }">
       <Sidebar />
-
       <!-- Drag handle -->
       <div class="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-gray-600 transition-colors"
         @mousedown="startResize"></div>
@@ -66,7 +102,7 @@ window.addEventListener('mousemove', onResize);
         <!-- Dropdown Menu -->
         <div
           class="absolute bottom-full mb-2 left-0 bg-white border border-gray-300 shadow-lg rounded-full overflow-hidden text-sm whitespace-nowrap min-w-max">
-          <button @click="toggleSidebar"
+          <button @click="toggleSidebar" title="Shift + \"
             class="block w-full text-left px-4 py-2 hover:bg-gray-100 whitespace-nowrap min-w-max">
             {{ isSidebarCollapsed ? '☰ Open Menu' : '✕ Close Menu' }}
           </button>

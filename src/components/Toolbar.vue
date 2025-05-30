@@ -1,10 +1,6 @@
 <!-- components/Toolbar.vue -->
 <script lang="ts" setup>
-import { useRouter } from 'vue-router';
-
-const emit = defineEmits(['play', 'settings']);
-
-const router = useRouter();
+const emit = defineEmits(['play', 'settings', 'home']);
 
 const onSettingsClick = () => {
     emit('settings');
