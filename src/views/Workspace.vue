@@ -102,7 +102,7 @@ onBeforeUnmount(async () => {
         <!-- Dropdown Menu -->
         <div
           class="absolute bottom-full mb-2 left-0 bg-white border border-gray-300 shadow-lg rounded-full overflow-hidden text-sm whitespace-nowrap min-w-max">
-          <button @click="toggleSidebar" title="Shift + \"
+          <button @click="toggleSidebar" title="Toggle Menu (⇧ + \)"
             class="block w-full text-left px-4 py-2 hover:bg-gray-100 whitespace-nowrap min-w-max">
             {{ isSidebarCollapsed ? '☰ Open Menu' : '✕ Close Menu' }}
           </button>

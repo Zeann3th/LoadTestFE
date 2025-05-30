@@ -1,5 +1,7 @@
 <!-- components/Toolbar.vue -->
 <script lang="ts" setup>
+import { defineEmits, onBeforeUnmount, onMounted } from 'vue';
+import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
 const emit = defineEmits<{
     (e: 'play'): void;
     (e: 'home'): void;
@@ -12,6 +14,21 @@ const onPlayClick = () => {
 const onHomeClick = () => {
     emit('home');
 };
+
+onMounted(async () => {
+    await register('CmdOrCtrl+Shift+H', () => {
+        onHomeClick();
+    });
+    await register('CmdOrCtrl+Shift+P', () => {
+        onPlayClick();
+    });
+});
+
+onBeforeUnmount(async () => {
+    await unregister('CmdOrCtrl+Shift+H');
+    await unregister('CmdOrCtrl+Shift+P');
+});
+
 </script>
 
 <template>
@@ -19,7 +36,7 @@ const onHomeClick = () => {
         <div class="bg-white border border-gray-300 shadow-lg rounded-full px-4 py-2 flex items-center gap-3">
             <!-- Home Icon -->
             <button @click="onHomeClick" class="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                title="Home">
+                title="Home (⌘ + ⇧ + H)">
                 <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" stroke-width="2"
                     viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -29,7 +46,7 @@ const onHomeClick = () => {
 
             <!-- Play Icon -->
             <button @click="onPlayClick" class="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                title="Play">
+                title="Play (⌘ + ⇧ + P)">
                 <svg class="w-5 h-5 text-gray-700" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z"></path>
                 </svg>
