@@ -14,7 +14,7 @@ const router = useRouter();
 const isToggling = ref(false);
 const showMenu = ref(false);
 
-defineProps<{
+const props = defineProps<{
   flowId: string
 }>();
 
@@ -64,7 +64,7 @@ const closeMenu = () => {
 
 const handleRunStarted = (runId: string) => {
   showMenu.value = false;
-  router.push(`/runs/${runId}`);
+  router.push(`/flows/${props.flowId}/runs/${runId}`);
 };
 
 onMounted(async () => {

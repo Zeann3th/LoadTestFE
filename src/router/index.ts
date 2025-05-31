@@ -24,12 +24,12 @@ const router = createRouter({
       }
     },
     {
-      path: "/runs/:runId",
-      name: "Run",
+      path: "/flows/:flowId/runs/:runId",
+      name: "Flow Run",
       props: true,
       component: Run,
       meta: {
-        title: "Run",
+        title: "Flow Run",
       }
     }
   ]

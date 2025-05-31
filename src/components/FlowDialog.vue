@@ -2,7 +2,6 @@
 import { ref, watch, computed } from 'vue';
 import { Flow } from '../types';
 
-// shadcn-vue components
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -24,7 +23,7 @@ interface Props {
 
 interface Emits {
     (e: 'update:open', value: boolean): void;
-    (e: 'submit', data: { name: string; description: string }): void;
+    (e: 'submit', data: { name: string; description?: string }): void;
     (e: 'cancel'): void;
 }
 
@@ -57,25 +56,23 @@ const submitButtonText = computed(() =>
 );
 
 const isFormValid = computed(() =>
-    formData.value.name.trim() !== '' && formData.value.description.trim() !== ''
+    formData.value.name.trim() !== ''
 );
 
-// Watch for prop changes to populate form
 watch(() => props.flow, (newFlow) => {
     if (newFlow) {
         formData.value = {
             name: newFlow.name,
-            description: newFlow.description
+            description: newFlow.description || ''
         };
     } else {
         formData.value = {
             name: '',
-            description: ''
+            description: ' '
         };
     }
 }, { immediate: true });
 
-// Watch for dialog open/close to reset form
 watch(() => props.open, (isOpen) => {
     if (!isOpen) {
         formData.value = {
@@ -85,14 +82,22 @@ watch(() => props.open, (isOpen) => {
     } else if (props.flow) {
         formData.value = {
             name: props.flow.name,
-            description: props.flow.description
+            description: props.flow.description || ''
         };
     }
 });
 
 const handleSubmit = () => {
     if (isFormValid.value) {
-        emit('submit', { ...formData.value });
+        const submitData: { name: string; description?: string } = {
+            name: formData.value.name.trim()
+        };
+
+        if (formData.value.description.trim()) {
+            submitData.description = formData.value.description.trim();
+        }
+
+        emit('submit', submitData);
     }
 };
 
@@ -128,7 +133,7 @@ const handleOpenChange = (value: boolean) => {
                 <div class="grid grid-cols-4 items-center gap-4">
                     <Label for="flow-description" class="text-right">Description</Label>
                     <Textarea id="flow-description" v-model="formData.description" class="col-span-3"
-                        placeholder="Enter flow description" rows="3" :disabled="loading" />
+                        placeholder="Enter flow description (optional)" rows="3" :disabled="loading" />
                 </div>
             </div>
             <DialogFooter>
