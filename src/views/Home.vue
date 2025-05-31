@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { Search, Plus, Edit, Trash2, Activity } from 'lucide-vue-next';
+import { Search, Plus, Edit, Trash2, Activity, RefreshCw } from 'lucide-vue-next';
 import { Flow } from '../types';
 import { fetch } from '@tauri-apps/plugin-http';
 import FlowListItem from '../components/FlowListItem.vue';
@@ -28,6 +28,7 @@ const flowPage = ref(1);
 const limit = 20;
 const flowTotalPages = ref(1);
 const loadingFlows = ref(false);
+const isReloading = ref(false);
 
 const router = useRouter();
 
@@ -53,6 +54,27 @@ const fetchFlows = async (isInitial = false) => {
         console.error('Error fetching flows:', err);
     } finally {
         loadingFlows.value = false;
+    }
+};
+
+const reloadFlows = async () => {
+    isReloading.value = true;
+    flowPage.value = 1;
+    flowTotalPages.value = 1;
+
+    try {
+        const res = await fetch(`http://localhost:31347/v1/flows?page=1&limit=${limit}`, {
+            method: 'GET',
+        });
+        const json = await res.json();
+
+        flows.value = json.data;
+        flowTotalPages.value = json.total;
+        flowPage.value = 2;
+    } catch (err) {
+        console.error('Error reloading flows:', err);
+    } finally {
+        isReloading.value = false;
     }
 };
 
@@ -269,15 +291,23 @@ const greeting = computed(() => {
         <div class="max-w-7xl mx-auto px-6 py-8">
             <!-- Flows List -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <!-- Search -->
-                <div class="px-4 pt-6">
-                    <div class="relative w-full">
-                        <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" :size="20" />
-                        <input v-model="searchTerm" type="text" placeholder="Search flows..."
-                            class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+                <!-- Search and Reload -->
+                <div class="px-4 pt-6 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="relative flex-1">
+                            <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" :size="20" />
+                            <input v-model="searchTerm" type="text" placeholder="Search flows..."
+                                class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+                        </div>
+                        <Button @click="reloadFlows" variant="outline" size="default" :disabled="isReloading"
+                            class="px-3 py-3 flex items-center gap-2 hover:bg-gray-50">
+                            <RefreshCw :class="['h-4 w-4', { 'animate-spin': isReloading }]" />
+                            <span class="hidden sm:inline">Reload</span>
+                        </Button>
                     </div>
                 </div>
-                <div v-if="filteredFlows.length === 0 && !loadingFlows" class="text-center py-16">
+
+                <div v-if="filteredFlows.length === 0 && !loadingFlows && !isReloading" class="text-center py-16">
                     <div class="max-w-md mx-auto">
                         <div
                             class="bg-gray-50 rounded-full p-6 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
@@ -320,10 +350,10 @@ const greeting = computed(() => {
                         </div>
                     </div>
 
-                    <div v-if="loadingFlows" class="text-center text-gray-500 text-sm py-8">
+                    <div v-if="loadingFlows || isReloading" class="text-center text-gray-500 text-sm py-8">
                         <div class="inline-flex items-center gap-2">
                             <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                            Loading...
+                            {{ isReloading ? 'Reloading...' : 'Loading...' }}
                         </div>
                     </div>
                 </div>

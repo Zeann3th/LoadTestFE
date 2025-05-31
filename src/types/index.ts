@@ -85,5 +85,5 @@ export interface RunOptions {
     threads: number;
     duration: number;
     rampUpTime: number;
-    input: string;
+    input: Record<string, any>;
 }

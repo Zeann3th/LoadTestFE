@@ -62,6 +62,11 @@ const closeMenu = () => {
   showMenu.value = false;
 };
 
+const handleRunStarted = (runId: string) => {
+  showMenu.value = false;
+  router.push(`/runs/${runId}`);
+};
+
 onMounted(async () => {
   try {
     await register('Shift+\\', toggleSidebar);
@@ -121,7 +126,7 @@ onBeforeUnmount(async () => {
     </div>
 
     <div v-if="showMenu" class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-all"></div>
-    <RunDialog :open="showMenu" :flowId="flowId" @close="closeMenu" @run="closeMenu" />
+    <RunDialog :open="showMenu" :flowId="flowId" @close="closeMenu" @run="handleRunStarted" />
   </div>
 </template>
 

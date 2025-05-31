@@ -5,11 +5,13 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { Codemirror } from 'vue-codemirror'
+import { json } from '@codemirror/lang-json'
 import { ref, watch } from 'vue'
 
 const props = defineProps<{
     modelValue: boolean
-    initialScript: string | object
+    initialScript: string
     endpointName: string
     executionIndex: number
     loading: boolean
@@ -21,21 +23,18 @@ const emit = defineEmits<{
     (e: 'save', script: string): void
 }>()
 
-const scriptText = ref(
-    typeof props.initialScript === 'object'
-        ? JSON.stringify(props.initialScript, null, 2)
-        : props.initialScript
-)
+const extensions = [json()]
+const script = ref('')
 const localError = ref('')
 
 watch(
-    () => props.initialScript,
-    (newVal) => {
-        scriptText.value = typeof newVal === 'object'
-            ? JSON.stringify(newVal, null, 2)
-            : newVal
-        localError.value = ''
-    }
+    () => props.modelValue,
+    (val) => {
+        if (val) {
+            script.value = props.initialScript || '{}'
+        }
+    },
+    { immediate: true }
 )
 
 const validateJson = (text: string): boolean => {
@@ -48,11 +47,11 @@ const validateJson = (text: string): boolean => {
 }
 
 const onSave = () => {
-    if (!validateJson(scriptText.value)) {
+    if (!validateJson(script.value)) {
         localError.value = 'Invalid JSON. Please enter a valid JSON object.'
         return
     }
-    emit('save', scriptText.value)
+    emit('save', script.value)
     localError.value = ''
 }
 </script>
@@ -68,9 +67,8 @@ const onSave = () => {
             </DialogHeader>
 
             <div class="space-y-4">
-                <Textarea v-model="scriptText" class="h-64 font-mono text-sm"
-                    placeholder="Enter post-processor script as JSON... (supports 'extract', 'delay' (in ms))"
-                    :disabled="loading" />
+                <Codemirror id="input" v-model="script" :extensions="extensions" :style="{ height: '200px' }"
+                    placeholder="{}" class="border rounded-lg" :disabled="loading" />
                 <div v-if="localError || error"
                     class="p-3 bg-destructive/10 border border-destructive rounded-lg text-destructive text-sm">
                     {{ localError || error }}

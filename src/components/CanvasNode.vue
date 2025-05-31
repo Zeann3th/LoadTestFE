@@ -14,9 +14,11 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 
 const openEditDialog = () => {
-    postProcessorText.value = typeof props.data.endpoint.postProcessor === 'object'
-        ? JSON.stringify(props.data.endpoint.postProcessor, null, 2)
-        : props.data.endpoint.postProcessor || ''
+    const processor = props.data.endpoint.postProcessor
+    postProcessorText.value = typeof processor === 'string'
+        ? processor
+        : JSON.stringify(processor ?? {}, null, 2)
+
     errorMessage.value = ''
     showDialog.value = true
 }
@@ -69,15 +71,12 @@ const savePostProcessor = async (script: string) => {
 
 <template>
     <div>
-        <!-- Node Component -->
         <div class="endpoint-node bg-white rounded-lg shadow-lg border-2 border-gray-200 hover:shadow-xl select-none"
             style="width: 300px; min-height: 150px; position: relative;" @dblclick="openEditDialog">
 
-            <!-- Connection Handles -->
             <Handle type="target" :position="Position.Left" :connectable="props.connectable" :style="{ zIndex: 10 }" />
             <Handle type="source" :position="Position.Right" :connectable="props.connectable" :style="{ zIndex: 10 }" />
 
-            <!-- Header -->
             <div class="p-3 border-b border-gray-200 flex items-center justify-between bg-gray-50 rounded-t-lg">
                 <div class="flex items-center space-x-2 vue-flow__drag-handle">
                     <Move :size="16" class="text-gray-400" />
@@ -85,7 +84,6 @@ const savePostProcessor = async (script: string) => {
                         :class="'px-2 py-1 text-xs font-semibold rounded border ' + methodColors[props.data.endpoint.method]">
                         {{ props.data.endpoint.method }}
                     </span>
-                    <!-- Execution Index Badge -->
                     <span v-if="props.data.executionIndex > 0"
                         class="px-2 py-1 text-xs font-bold bg-blue-500 text-white rounded-full">
                         {{ props.data.executionIndex }}
@@ -104,7 +102,6 @@ const savePostProcessor = async (script: string) => {
                 </div>
             </div>
 
-            <!-- Content -->
             <div class="p-3 space-y-2">
                 <div>
                     <h3 class="font-semibold text-gray-900 text-sm truncate">
@@ -139,7 +136,6 @@ const savePostProcessor = async (script: string) => {
             </div>
         </div>
 
-        <!-- Dialog Overlay -->
         <PostProcessorDialog v-model="showDialog" :initialScript="postProcessorText"
             :endpointName="props.data.endpoint.name" :executionIndex="props.data.executionIndex" :loading="isLoading"
             :error="errorMessage" @save="savePostProcessor" />

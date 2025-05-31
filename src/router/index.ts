@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Home from "../views/Home.vue";
 import Workspace from "../views/Workspace.vue";
+import Run from "@/views/Run.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -20,6 +21,15 @@ const router = createRouter({
       component: Workspace,
       meta: {
         title: "Workspace",
+      }
+    },
+    {
+      path: "/runs/:runId",
+      name: "Run",
+      props: true,
+      component: Run,
+      meta: {
+        title: "Run",
       }
     }
   ]
