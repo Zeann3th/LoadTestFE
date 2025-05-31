@@ -1,12 +1,11 @@
 <script lang="ts" setup>
 import { computed } from 'vue';
-import { Flow } from '../types'; // Adjust path if needed, e.g., '@/types' or specific relative path
+import { Flow } from '../types';
 
 const props = defineProps<{
     flow: Flow;
-    index: number; // This is used in the new FlowList.vue
-    showActions?: boolean; // This prop is not explicitly used by FlowList for its internal Edit/Delete buttons
-    // but can be used by FlowListItem itself if it has its own action elements.
+    index: number;
+    showActions?: boolean;
 }>();
 
 defineEmits<{

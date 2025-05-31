@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { APP_BACKEND } from '../env'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import {
     Search, ChevronDown, ChevronRight, Folder, FolderOpen
@@ -26,7 +27,7 @@ const fetchEndpoints = async (isInitial = false) => {
     loading.value = true;
 
     try {
-        const res = await fetch(`http://localhost:31347/v1/endpoints?page=${page.value}&limit=${limit}`, {
+        const res = await fetch(`${APP_BACKEND}/v1/endpoints?page=${page.value}&limit=${limit}`, {
             method: 'GET',
         });
         const json = await res.json();
@@ -92,7 +93,7 @@ const onDrop = async (e: DragEvent) => {
     formData.append('file', file);
 
     try {
-        const response = await fetch('http://localhost:31347/v1/endpoints/upload', {
+        const response = await fetch(`${APP_BACKEND}/v1/endpoints/upload`, {
             method: 'POST',
             body: formData,
         });

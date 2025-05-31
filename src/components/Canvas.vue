@@ -4,7 +4,7 @@ import { Connection, Position, VueFlow, useVueFlow } from '@vue-flow/core';
 import { Controls } from '@vue-flow/controls';
 import { Background } from '@vue-flow/background';
 import { Endpoint, CanvasEndpoint, VueFlowNode, VueFlowEdge, ActionNode, FlowDetail } from '../types';
-
+import { APP_BACKEND } from '../env';
 import '@vue-flow/core/dist/style.css';
 import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/controls/dist/style.css';
@@ -114,7 +114,7 @@ async function fetchFlowDetail(): Promise<FlowDetail | null> {
         isLoading.value = true;
         loadError.value = null;
 
-        const res = await fetch(`http://localhost:31347/v1/flows/${props.flowId}`);
+        const res = await fetch(`${APP_BACKEND}/v1/flows/${props.flowId}`);
 
         if (!res.ok) {
             throw new Error(`Failed to fetch flow detail: ${res.status} ${res.statusText}`);
@@ -207,7 +207,7 @@ function createCanvasFromSequence(sequence: ActionNode[]) {
 async function saveSequence(sequence: string[]) {
     try {
         console.log('Saving endpoint sequence:', sequence);
-        const res = await fetch(`http://localhost:31347/v1/flows/${props.flowId}`, {
+        const res = await fetch(`${APP_BACKEND}/v1/flows/${props.flowId}`, {
             method: 'PATCH',
             body: JSON.stringify({ sequence }),
             headers: {

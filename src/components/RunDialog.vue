@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import {APP_BACKEND} from '../env'
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from '@/components/ui/dialog'
@@ -46,7 +47,7 @@ const handleRun = async () => {
             input: parsedInput
         }
 
-        const response = await fetch(`http://localhost:31347/v1/flows/${props.flowId}/run`, {
+        const response = await fetch(`${APP_BACKEND}/v1/flows/${props.flowId}/run`, {
             method: 'POST',
             body: JSON.stringify(payload),
             headers: {

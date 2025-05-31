@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { APP_BACKEND } from '../env'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { Search, Plus, Edit, Trash2, Activity, RefreshCw } from 'lucide-vue-next';
 import { Flow } from '../types';
@@ -37,7 +38,7 @@ const fetchFlows = async (isInitial = false) => {
     loadingFlows.value = true;
 
     try {
-        const res = await fetch(`http://localhost:31347/v1/flows?page=${flowPage.value}&limit=${limit}`, {
+        const res = await fetch(`${APP_BACKEND}/v1/flows?page=${flowPage.value}&limit=${limit}`, {
             method: 'GET',
         });
         const json = await res.json();
@@ -63,7 +64,7 @@ const reloadFlows = async () => {
     flowTotalPages.value = 1;
 
     try {
-        const res = await fetch(`http://localhost:31347/v1/flows?page=1&limit=${limit}`, {
+        const res = await fetch(`${APP_BACKEND}/v1/flows?page=1&limit=${limit}`, {
             method: 'GET',
         });
         const json = await res.json();
@@ -78,16 +79,16 @@ const reloadFlows = async () => {
     }
 };
 
-const handleCreateFlow = async (data: { name: string; description: string }) => {
-    if (data.name.trim() === '' || data.description.trim() === '') return;
+const handleCreateFlow = async (data: { name: string; description?: string }) => {
+    if (data.name.trim() === '') return;
 
     isCreatingFlow.value = true;
     try {
-        const res = await fetch('http://localhost:31347/v1/flows', {
+        const res = await fetch(`${APP_BACKEND}/v1/flows`, {
             method: 'POST',
             body: JSON.stringify({
                 name: data.name,
-                description: data.description
+                ...(data.description?.trim() !== '' ? { description: data.description } : {})
             }),
             headers: {
                 'Content-Type': 'application/json'
@@ -108,17 +109,17 @@ const handleCreateFlow = async (data: { name: string; description: string }) => 
     }
 };
 
-const handleEditFlow = async (data: { name: string; description: string }) => {
+const handleEditFlow = async (data: { name: string; description?: string }) => {
     if (!currentEditingFlow.value) return;
 
     const req = {
         ...(data.name.trim() !== '' ? { name: data.name } : {}),
-        ...(data.description.trim() !== '' ? { description: data.description } : {})
+        ...(data.description?.trim() !== '' ? { description: data.description } : {})
     };
 
     isUpdatingFlow.value = true;
     try {
-        const res = await fetch(`http://localhost:31347/v1/flows/${currentEditingFlow.value.id}`, {
+        const res = await fetch(`${APP_BACKEND}/v1/flows/${currentEditingFlow.value.id}`, {
             method: 'PATCH',
             body: JSON.stringify(req),
             headers: {
@@ -149,7 +150,7 @@ const handleDeleteFlow = async () => {
 
     isDeletingFlow.value = true;
     try {
-        const res = await fetch(`http://localhost:31347/v1/flows/${flowToDelete.value.id}`, {
+        const res = await fetch(`${APP_BACKEND}/v1/flows/${flowToDelete.value.id}`, {
             method: 'DELETE'
         });
 

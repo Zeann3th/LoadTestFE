@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { APP_BACKEND } from '../env'
 import { Handle, Position, type NodeProps } from '@vue-flow/core'
 import { Move, X, Settings } from 'lucide-vue-next'
 import { methodColors } from '../types'
@@ -39,7 +40,7 @@ const savePostProcessor = async (script: string) => {
         isLoading.value = true
         errorMessage.value = ''
 
-        const response = await fetch(`http://localhost:31347/v1/flows/${props.data.flowId}/processor`, {
+        const response = await fetch(`${APP_BACKEND}/v1/flows/${props.data.flowId}/processor`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json'

@@ -68,7 +68,7 @@ watch(() => props.flow, (newFlow) => {
     } else {
         formData.value = {
             name: '',
-            description: ' '
+            description: ''
         };
     }
 }, { immediate: true });
@@ -89,15 +89,11 @@ watch(() => props.open, (isOpen) => {
 
 const handleSubmit = () => {
     if (isFormValid.value) {
-        const submitData: { name: string; description?: string } = {
-            name: formData.value.name.trim()
-        };
-
-        if (formData.value.description.trim()) {
-            submitData.description = formData.value.description.trim();
-        }
-
-        emit('submit', submitData);
+        const description = formData.value.description.trim();
+        emit('submit', {
+            name: formData.value.name,
+            description
+        });
     }
 };
 
@@ -133,7 +129,7 @@ const handleOpenChange = (value: boolean) => {
                 <div class="grid grid-cols-4 items-center gap-4">
                     <Label for="flow-description" class="text-right">Description</Label>
                     <Textarea id="flow-description" v-model="formData.description" class="col-span-3"
-                        placeholder="Enter flow description (optional)" rows="3" :disabled="loading" />
+                        placeholder="Enter flow description" rows="3" :disabled="loading" />
                 </div>
             </div>
             <DialogFooter>
