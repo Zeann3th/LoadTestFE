@@ -72,6 +72,8 @@ function resizeChart() {
     chart?.resize();
 }
 
+let interval: ReturnType<typeof setInterval>;
+
 onMounted(async () => {
     await nextTick();
     if (chartRef.value) {
@@ -136,14 +138,14 @@ onMounted(async () => {
         },
     });
 
-    const interval = setInterval(updateChart, 1000);
+    interval = setInterval(updateChart, 1000);
+});
 
-    onBeforeUnmount(() => {
-        wsClient?.disconnect();
-        chart?.dispose();
-        clearInterval(interval);
-        window.removeEventListener('resize', resizeChart);
-    });
+onBeforeUnmount(() => {
+    wsClient?.disconnect();
+    chart?.dispose();
+    clearInterval(interval);
+    window.removeEventListener('resize', resizeChart);
 });
 
 const handleExport = async () => {

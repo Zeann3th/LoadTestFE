@@ -18,11 +18,12 @@ export class WSClient {
         this.runId = runId;
         const serverUrl = options.serverUrl || 'http://localhost:31347';
 
-        this.socket = io(serverUrl, {
+        this.socket = io(serverUrl.replace("http://", "ws://"), {
             autoConnect: true,
             reconnection: true,
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,
+            transports: ['websocket'],
         });
 
         this.setupEventListeners(options);
