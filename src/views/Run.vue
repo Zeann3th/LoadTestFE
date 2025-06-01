@@ -3,6 +3,8 @@ import { APP_BACKEND } from "../env";
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import * as echarts from 'echarts';
+import { save } from "@tauri-apps/plugin-dialog";
+import { download } from "@tauri-apps/plugin-upload";
 import { WSClient, createWSClient } from "../ws";
 
 const props = defineProps<{
@@ -151,21 +153,20 @@ onBeforeUnmount(() => {
 const handleExport = async () => {
     if (!isComplete.value) return;
     try {
-        const response = await fetch(`${APP_BACKEND}/v1/runs/${props.runId}/report`);
-        if (!response.ok) {
-            throw new Error("Failed to generate report");
-        }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `report-${props.runId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
+        const path = await save({
+            defaultPath: `report-${props.runId}.pdf`,
+            filters: [{
+                name: `PDF Document`,
+                extensions: ['pdf']
+            }]
+        })
 
-        console.log("Report downloaded successfully");
+        if (!path) return;
+
+        await download(
+            `${APP_BACKEND}/v1/runs/${props.runId}/report`,
+            path
+        )
     } catch (error) {
         console.error("Export failed:", error);
         alert("Failed to generate report. Please try again.");
