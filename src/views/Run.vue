@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { APP_BACKEND } from "../env";
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import * as echarts from 'echarts';
 import { WSClient, createWSClient } from "../ws";
@@ -21,7 +22,6 @@ interface Log {
 
 let logBuffer: Log[] = [];
 
-// Bins logs into intervals and calculates average responseTime
 function binLogs(data: Log[], intervalMs: number): [number, number][] {
     const bins = new Map<number, number[]>();
 
@@ -39,28 +39,22 @@ function binLogs(data: Log[], intervalMs: number): [number, number][] {
 }
 
 function updateChart() {
-    if (!chart) return;
-    if (logBuffer.length === 0) return;
+    if (!chart || logBuffer.length === 0) return;
 
-    // Extract and bin the new logs
     const binned = binLogs(logBuffer.splice(0), 1000);
 
-    // Get existing data or empty array
     const option = chart.getOption();
     const oldData = (option?.series && Array.isArray(option.series) && option.series[0]?.data)
         ? (option.series[0].data as [number, number][])
         : [];
 
-    // Merge old and new data and keep last 300 points
     const mergedData = [...oldData, ...binned]
         .sort((a, b) => a[0] - b[0])
         .slice(-300);
 
-    // Calculate visible xAxis window: last 60 seconds
     const now = Date.now();
     const windowStart = now - 60000;
 
-    // Filter points inside window (to avoid showing stale points outside axis range)
     const filteredData = mergedData.filter(([ts]) => ts >= windowStart);
 
     chart.setOption({
@@ -69,25 +63,39 @@ function updateChart() {
             min: windowStart,
             max: now,
         },
-    }, false); // false = merge option, don't overwrite all
+    }, false);
 }
 
-onMounted(() => {
+const isComplete = ref(false);
+
+function resizeChart() {
+    chart?.resize();
+}
+
+onMounted(async () => {
+    await nextTick();
     if (chartRef.value) {
         chart = echarts.init(chartRef.value);
-
         chart.setOption({
             animation: false,
             xAxis: {
                 type: 'time',
                 name: 'Time',
-                splitLine: { show: false },
+                axisLine: { show: true, lineStyle: { color: '#ccc' } },
+                splitLine: {
+                    show: true,
+                    lineStyle: { color: '#eee' }
+                },
             },
             yAxis: {
                 type: 'value',
                 name: 'Response Time (ms)',
                 min: 0,
-                splitLine: { show: true },
+                axisLine: { show: true, lineStyle: { color: '#ccc' } },
+                splitLine: {
+                    show: true,
+                    lineStyle: { color: '#eee' }
+                },
             },
             series: [{
                 type: 'line',
@@ -95,6 +103,12 @@ onMounted(() => {
                 showSymbol: false,
                 large: true,
                 smooth: true,
+                lineStyle: {
+                    color: '#22c55e',
+                },
+                itemStyle: {
+                    color: '#22c55e',
+                }
             }],
             tooltip: {
                 trigger: 'axis',
@@ -106,6 +120,10 @@ onMounted(() => {
                 }
             },
         });
+
+
+        window.addEventListener('resize', resizeChart);
+        resizeChart();
     }
 
     wsClient = createWSClient(props.runId, {
@@ -113,6 +131,7 @@ onMounted(() => {
             logBuffer.push(...logs);
         },
         onDone: () => {
+            isComplete.value = true;
             console.log('Run completed');
         },
     });
@@ -123,24 +142,51 @@ onMounted(() => {
         wsClient?.disconnect();
         chart?.dispose();
         clearInterval(interval);
+        window.removeEventListener('resize', resizeChart);
     });
 });
+
+const handleExport = async () => {
+    if (!isComplete.value) return;
+    try {
+        const response = await fetch(`${APP_BACKEND}/v1/runs/${props.runId}/report`);
+        if (!response.ok) {
+            throw new Error("Failed to generate report");
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `report-${props.runId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+
+        console.log("Report downloaded successfully");
+    } catch (error) {
+        console.error("Export failed:", error);
+        alert("Failed to generate report. Please try again.");
+    }
+}
 </script>
 
 <template>
-    <div class="h-full w-full relative flex items-center justify-center">
-        <div ref="chartRef" class="w-full max-w-4xl h-[400px]" />
+    <div class="w-screen h-screen bg-white relative overflow-hidden">
+        <div ref="chartRef" class="absolute inset-0" />
 
-        <div class="fixed bottom-4 left-4 z-50">
-            <div class="relative">
-                <div
-                    class="absolute bottom-full mb-2 left-0 bg-white border border-gray-300 shadow-lg rounded-full overflow-hidden text-sm whitespace-nowrap min-w-max">
-                    <button @click="router.push(`/workspace/${flowId}`)" title="Go Back"
-                        class="block w-full text-left px-4 py-2 hover:bg-gray-100 whitespace-nowrap min-w-max">
-                        Go Back
-                    </button>
-                </div>
-            </div>
+        <div v-if="isComplete" class="absolute top-6 right-6 z-50">
+            <button @click="handleExport"
+                class="bg-green-500 text-white font-semibold px-4 py-2 rounded shadow hover:bg-green-600 transition">
+                Download Report
+            </button>
+        </div>
+
+        <div class="absolute bottom-6 left-6 z-50">
+            <button @click="router.push(`/workspace/${flowId}`)"
+                class="bg-white border border-gray-300 px-4 py-2 rounded-full shadow hover:bg-gray-100 transition">
+                &lt; Go Back
+            </button>
         </div>
     </div>
 </template>

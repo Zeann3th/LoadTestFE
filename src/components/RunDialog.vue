@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {APP_BACKEND} from '../env'
+import { APP_BACKEND } from '../env'
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from '@/components/ui/dialog'
