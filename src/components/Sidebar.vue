@@ -27,6 +27,12 @@ const fetchEndpoints = async (isInitial = false) => {
     loading.value = true;
 
     try {
+        if (isInitial) {
+            page.value = 1;
+            totalPages.value = 1;
+            endpoints.value = [];
+        }
+
         const res = await fetch(`${APP_BACKEND}/v1/endpoints?page=${page.value}&limit=${limit}`, {
             method: 'GET',
         });
@@ -39,7 +45,6 @@ const fetchEndpoints = async (isInitial = false) => {
         }
 
         totalPages.value = json.total;
-
         page.value += 1;
 
     } catch (err) {
@@ -48,6 +53,7 @@ const fetchEndpoints = async (isInitial = false) => {
         loading.value = false;
     }
 };
+
 
 const handleScroll = () => {
     const el = scrollContainer.value;
