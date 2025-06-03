@@ -30,6 +30,8 @@
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
     "dialog:allow-save",
-    "upload:allow-download"
+    "dialog:allow-open",
+    "upload:allow-download",
+    "fs:default"
   ]
 }

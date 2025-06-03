@@ -86,4 +86,5 @@ export interface RunOptions {
     duration: number;
     rampUpTime: number;
     input: string;
+    credentials?: string;
 }

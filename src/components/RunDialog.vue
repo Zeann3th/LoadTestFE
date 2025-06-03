@@ -11,6 +11,8 @@ import { Label } from '@/components/ui/label'
 import { ref } from 'vue'
 import type { RunOptions } from '@/types'
 import { fetch } from '@tauri-apps/plugin-http'
+import { open as openFileDialog } from '@tauri-apps/plugin-dialog'
+import { readTextFile } from '@tauri-apps/plugin-fs'
 
 const props = defineProps<{
     open: boolean
@@ -26,17 +28,53 @@ const options = ref<RunOptions>({
     threads: 2,
     duration: 360,
     rampUpTime: 200,
-    input: '{}'
+    input: '{}',
+    credentials: '[]'
 })
 
 const loading = ref(false)
+
+const selectCredentialsFile = async () => {
+    try {
+        const selected = await openFileDialog({
+            multiple: false,
+            filters: [{
+                name: 'JSON',
+                extensions: ['json']
+            }, {
+                name: 'Text',
+                extensions: ['txt']
+            }]
+        })
+
+        if (selected) {
+            const filePath = Array.isArray(selected) ? selected[0] : selected
+            const contents = await readTextFile(filePath)
+
+            try {
+                JSON.parse(contents)
+                options.value.credentials = contents
+            } catch (parseError) {
+                console.error('Invalid JSON file:', parseError)
+                alert('Selected file does not contain valid JSON')
+            }
+        }
+    } catch (error) {
+        console.error('Error reading file:', error)
+        alert('Error reading file: ' + error)
+    }
+}
+
+
 
 const handleRun = async () => {
     loading.value = true
     try {
         let parsedInput = {}
+        let parsedCredentials = []
         try {
             parsedInput = JSON.parse(options.value.input || '{}')
+            parsedCredentials = JSON.parse(options.value.credentials || '[]')
         } catch (parseError) {
             console.warn('Invalid JSON input, using empty object:', parseError)
             parsedInput = {}
@@ -44,7 +82,8 @@ const handleRun = async () => {
 
         const payload = {
             ...options.value,
-            input: parsedInput
+            input: parsedInput,
+            credentials: parsedCredentials
         }
 
         const response = await fetch(`${APP_BACKEND}/v1/flows/${props.flowId}/run`, {
@@ -99,10 +138,19 @@ const handleRun = async () => {
                     <Label for="rampup" class="text-right">Ramp Up Time</Label>
                     <Input id="rampup" v-model="options.rampUpTime" type="number" placeholder="Ramp-up time (s)" />
                 </div>
+                <!-- Credentials JSON -->
+                <div>
+                    <Label for="credentials" class="text-right">Credentials</Label>
+                    <Button variant="outline" size="sm" @click="selectCredentialsFile">
+                        Select File
+                    </Button>
+                    <Codemirror id="credentials" v-model="options.credentials" :extensions="extensions"
+                        :style="{ height: '100px' }" placeholder="[]" class="border rounded-lg" />
+                </div>
                 <!-- Input JSON -->
                 <div>
                     <Label for="input" class="text-right">Additional Input</Label>
-                    <Codemirror id="input" v-model="options.input" :extensions="extensions" :style="{ height: '200px' }"
+                    <Codemirror id="input" v-model="options.input" :extensions="extensions" :style="{ height: '100px' }"
                         placeholder="{}" class="border rounded-lg" />
                 </div>
             </div>
