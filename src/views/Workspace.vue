@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
-import Sidebar from '../components/Sidebar.vue';
-import Canvas from '../components/Canvas.vue';
-import Toolbar from '../components/Toolbar.vue';
+import Sidebar from '@/components/Sidebar.vue';
+import Canvas from '@/components/Canvas/Canvas.vue';
+import Toolbar from '@/components/Toolbar.vue';
 import { useRouter } from 'vue-router';
 import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
 import RunDialog from '@/components/RunDialog.vue'

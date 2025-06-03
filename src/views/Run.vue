@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-import { APP_BACKEND } from "../env";
+import { APP_BACKEND } from "@/env";
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import * as echarts from 'echarts';
 import { save } from "@tauri-apps/plugin-dialog";
 import { download } from "@tauri-apps/plugin-upload";
-import { WSClient, createWSClient } from "../ws";
+import { WSClient, createWSClient } from "@/ws";
 
 const props = defineProps<{
     runId: string;

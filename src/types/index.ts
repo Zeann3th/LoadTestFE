@@ -88,3 +88,15 @@ export interface RunOptions {
     input: string;
     credentials?: string;
 }
+
+export interface FlowRun {
+    id: string;
+    flowId: string;
+    status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+    ccu: number;
+    threads: number;
+    duration: number;
+    rampUpTime: number;
+    createdAt: string;
+    updatedAt: string;
+}

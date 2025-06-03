@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed } from 'vue';
-import { Flow } from '../types';
+import { Flow } from '@/types';
 
 const props = defineProps<{
     flow: Flow;

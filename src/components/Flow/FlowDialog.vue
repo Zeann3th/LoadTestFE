@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, watch, computed } from 'vue';
-import { Flow } from '../types';
+import { Flow } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import {

@@ -3,14 +3,14 @@ import { ref, computed, watch, markRaw, onMounted } from 'vue';
 import { Connection, Position, VueFlow, useVueFlow } from '@vue-flow/core';
 import { Controls } from '@vue-flow/controls';
 import { Background } from '@vue-flow/background';
-import { Endpoint, CanvasEndpoint, VueFlowNode, VueFlowEdge, ActionNode, FlowDetail } from '../types';
-import { APP_BACKEND } from '../env';
+import { Endpoint, CanvasEndpoint, VueFlowNode, VueFlowEdge, ActionNode, FlowDetail } from '@/types';
 import '@vue-flow/core/dist/style.css';
 import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/controls/dist/style.css';
 import CanvasNode from './CanvasNode.vue';
 import { fetch } from '@tauri-apps/plugin-http';
-import { debounce } from '../utils';
+import { APP_BACKEND } from '@/env';
+import { debounce } from '@/utils';
 
 const props = defineProps<{
     flowId: string;

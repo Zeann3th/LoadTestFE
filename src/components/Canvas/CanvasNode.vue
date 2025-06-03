@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-import { APP_BACKEND } from '../env'
 import { Handle, Position, type NodeProps } from '@vue-flow/core'
 import { Move, X, Settings } from 'lucide-vue-next'
-import { methodColors } from '../types'
 import { ref } from 'vue'
 import { fetch } from '@tauri-apps/plugin-http'
 import PostProcessorDialog from './PostProcessorDialog.vue'
+import { APP_BACKEND } from '@/env'
+import { methodColors } from '@/types'
 
 const props = defineProps<NodeProps<any>>()
 
