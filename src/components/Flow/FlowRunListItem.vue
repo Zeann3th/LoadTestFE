@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { FlowRun } from '@/types';
+import { computed } from 'vue';
 
 
 interface Props {
@@ -7,7 +8,7 @@ interface Props {
     index: number;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const getStatusColor = (status: string) => {
     switch (status) {
@@ -58,16 +59,9 @@ const formatDate = (dateString: string) => {
     });
 };
 
-const getExecutionTime = (run: FlowRun) => {
-    if (run.status !== 'COMPLETED') return null;
-
-    const start = new Date(run.createdAt);
-    const end = new Date(run.updatedAt);
-    const diffMs = end.getTime() - start.getTime();
-    const diffSeconds = Math.floor(diffMs / 1000);
-
-    return formatDuration(diffSeconds);
-};
+const slicedRunId = computed(() => {
+    return props.run.id.substring(0, 6)
+})
 </script>
 
 <template>
@@ -86,8 +80,8 @@ const getExecutionTime = (run: FlowRun) => {
                         {{ run.status }}
                     </span>
                 </div>
-                <span class="text-sm text-gray-500">
-                    Run #{{ run.id }}
+                <span class="text-sm text-gray-500" :title="run.id">
+                    Run #{{ slicedRunId }}
                 </span>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -116,10 +110,6 @@ const getExecutionTime = (run: FlowRun) => {
                 <div v-if="run.status === 'COMPLETED'">
                     <span>Completed:</span>
                     <span class="ml-1">{{ formatDate(run.updatedAt) }}</span>
-                </div>
-                <div v-if="run.status === 'COMPLETED' && getExecutionTime(run)">
-                    <span>Execution Time:</span>
-                    <span class="ml-1">{{ getExecutionTime(run) }}</span>
                 </div>
             </div>
         </div>

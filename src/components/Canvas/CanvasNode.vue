@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Handle, Position, type NodeProps } from '@vue-flow/core'
-import { Move, X, Settings } from 'lucide-vue-next'
+import { X, Settings } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { fetch } from '@tauri-apps/plugin-http'
 import PostProcessorDialog from './PostProcessorDialog.vue'
@@ -80,7 +80,6 @@ const savePostProcessor = async (script: string) => {
 
             <div class="p-3 border-b border-gray-200 flex items-center justify-between bg-gray-50 rounded-t-lg">
                 <div class="flex items-center space-x-2 vue-flow__drag-handle">
-                    <Move :size="16" class="text-gray-400" />
                     <span
                         :class="'px-2 py-1 text-xs font-semibold rounded border ' + methodColors[props.data.endpoint.method]">
                         {{ props.data.endpoint.method }}

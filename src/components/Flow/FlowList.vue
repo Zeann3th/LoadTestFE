@@ -53,10 +53,7 @@ onBeforeUnmount(() => {
 });
 
 watch(() => props.flows, () => {
-    // If list is externally reset (e.g. after reload and initial items are few),
-    // scroll might not be at top. Ensure it is to avoid incorrect "bottom" detection.
-    if (flowScrollContainer.value && flowScrollContainer.value.scrollTop !== 0 && filteredFlows.value.length < (props.flows.length / 2)) { // Heuristic
-        // flowScrollContainer.value.scrollTop = 0; // Or reconsider this if it causes issues
+    if (flowScrollContainer.value && flowScrollContainer.value.scrollTop !== 0 && filteredFlows.value.length < (props.flows.length / 2)) {
     }
 }, { deep: true });
 

@@ -6,6 +6,10 @@ import * as echarts from 'echarts';
 import { save } from "@tauri-apps/plugin-dialog";
 import { download } from "@tauri-apps/plugin-upload";
 import { WSClient, createWSClient } from "@/ws";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Download, ArrowLeft, Activity, Clock } from 'lucide-vue-next';
 
 const props = defineProps<{
     runId: string;
@@ -125,7 +129,6 @@ onMounted(async () => {
             },
         });
 
-
         window.addEventListener('resize', resizeChart);
         resizeChart();
     }
@@ -172,24 +175,61 @@ const handleExport = async () => {
         alert("Failed to generate report. Please try again.");
     }
 }
+
+const goBack = () => {
+    router.push(`/workspace/${props.flowId}`);
+};
 </script>
 
 <template>
-    <div class="w-screen h-screen bg-white relative overflow-hidden">
-        <div ref="chartRef" class="absolute inset-0" />
+    <div class="min-h-screen bg-gray-50 p-6">
+        <div class="max-w-7xl mx-auto space-y-6">
+            <!-- Header Section -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <Button @click="goBack" variant="ghost" size="sm" class="flex items-center gap-2 hover:bg-gray-100">
+                        <ArrowLeft class="h-4 w-4" />
+                        Back to Workspace
+                    </Button>
+                    <div class="space-y-1">
+                        <h1 class="text-3xl font-bold tracking-tight text-gray-900">Performance Monitor</h1>
+                        <div class="flex items-center gap-3">
+                            <p class="text-gray-600">Run ID: {{ runId }}</p>
+                            <Badge :variant="isComplete ? 'default' : 'secondary'" class="flex items-center gap-1">
+                                <Activity class="h-3 w-3" />
+                                {{ isComplete ? 'Completed' : 'Running' }}
+                            </Badge>
+                        </div>
+                    </div>
+                </div>
 
-        <div v-if="isComplete" class="absolute top-6 right-6 z-50">
-            <button @click="handleExport"
-                class="bg-green-500 text-white font-semibold px-4 py-2 rounded shadow hover:bg-green-600 transition">
-                Download Report
-            </button>
-        </div>
+                <Button @click="handleExport" :disabled="!isComplete" :variant="isComplete ? 'default' : 'secondary'"
+                    class="flex items-center gap-2" :class="{ 'opacity-50 cursor-not-allowed': !isComplete }">
+                    <Download class="h-4 w-4" />
+                    Download Report
+                </Button>
+            </div>
 
-        <div class="absolute bottom-6 left-6 z-50">
-            <button @click="router.push(`/workspace/${flowId}`)"
-                class="bg-white border border-gray-300 px-4 py-2 rounded-full shadow hover:bg-gray-100 transition">
-                &lt; Go Back
-            </button>
+            <!-- Chart Card -->
+            <Card class="shadow-lg border-0">
+                <CardHeader class="pb-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-green-100 rounded-lg">
+                                <Clock class="h-5 w-5 text-green-600" />
+                            </div>
+                            <div>
+                                <CardTitle class="text-xl">Response Time Analytics</CardTitle>
+                            </div>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent class="p-0">
+                    <div class="h-[600px] w-full">
+                        <div ref="chartRef" class="w-full h-full" />
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     </div>
 </template>

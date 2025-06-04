@@ -65,8 +65,6 @@ const selectCredentialsFile = async () => {
     }
 }
 
-
-
 const handleRun = async () => {
     loading.value = true
     try {
@@ -112,48 +110,67 @@ const handleRun = async () => {
 
 <template>
     <Dialog :open="open" @update:open="emit('close')">
-        <DialogContent class="max-w-2xl">
+        <DialogContent class="!max-w-5xl !w-full">
             <DialogHeader>
                 <DialogTitle>Configure Run</DialogTitle>
                 <DialogDescription>Adjust performance test parameters</DialogDescription>
             </DialogHeader>
-            <div class="space-y-4 py-4">
-                <!-- CCU -->
-                <div>
-                    <Label for="ccu" class="text-right">Concurrent Users</Label>
-                    <Input id="ccu" v-model="options.ccu" type="number" placeholder="100" />
+
+            <div class="grid grid-cols-2 gap-8 py-4">
+                <!-- Left Column -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Test Parameters</h3>
+
+                    <!-- CCU -->
+                    <div class="space-y-2">
+                        <Label for="ccu" class="text-sm font-medium">Concurrent Users</Label>
+                        <Input id="ccu" v-model="options.ccu" type="number" placeholder="100" />
+                    </div>
+
+                    <!-- Threads -->
+                    <div class="space-y-2">
+                        <Label for="threads" class="text-sm font-medium">Threads</Label>
+                        <Input id="threads" v-model="options.threads" type="number" placeholder="2" />
+                    </div>
+
+                    <!-- Duration -->
+                    <div class="space-y-2">
+                        <Label for="duration" class="text-sm font-medium">Duration (seconds)</Label>
+                        <Input id="duration" v-model="options.duration" type="number" placeholder="360" />
+                    </div>
+
+                    <!-- Ramp Up Time -->
+                    <div class="space-y-2">
+                        <Label for="rampup" class="text-sm font-medium">Ramp Up Time (seconds)</Label>
+                        <Input id="rampup" v-model="options.rampUpTime" type="number" placeholder="200" />
+                    </div>
                 </div>
-                <!-- Threads -->
-                <div>
-                    <Label for="threads" class="text-right">Threads</Label>
-                    <Input id="threads" v-model="options.threads" type="number" placeholder="Threads" />
-                </div>
-                <!-- Duration -->
-                <div>
-                    <Label for="duration" class="text-right">Duration (s)</Label>
-                    <Input id="duration" v-model="options.duration" type="number" placeholder="Duration (s)" />
-                </div>
-                <!-- Ramp Up Time -->
-                <div>
-                    <Label for="rampup" class="text-right">Ramp Up Time</Label>
-                    <Input id="rampup" v-model="options.rampUpTime" type="number" placeholder="Ramp-up time (s)" />
-                </div>
-                <!-- Credentials JSON -->
-                <div>
-                    <Label for="credentials" class="text-right">Credentials</Label>
-                    <Button variant="outline" size="sm" @click="selectCredentialsFile">
-                        Select File
-                    </Button>
-                    <Codemirror id="credentials" v-model="options.credentials" :extensions="extensions"
-                        :style="{ height: '100px' }" placeholder="[]" class="border rounded-lg" />
-                </div>
-                <!-- Input JSON -->
-                <div>
-                    <Label for="input" class="text-right">Additional Input</Label>
-                    <Codemirror id="input" v-model="options.input" :extensions="extensions" :style="{ height: '100px' }"
-                        placeholder="{}" class="border rounded-lg" />
+
+                <!-- Right Column -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Configuration Data</h3>
+
+                    <!-- Credentials JSON -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <Label for="credentials" class="text-sm font-medium">Credentials</Label>
+                            <Button variant="outline" size="sm" @click="selectCredentialsFile">
+                                Select File
+                            </Button>
+                        </div>
+                        <Codemirror id="credentials" v-model="options.credentials" :extensions="extensions"
+                            :style="{ height: '140px' }" placeholder="[]" class="border rounded-lg" />
+                    </div>
+
+                    <!-- Input JSON -->
+                    <div class="space-y-2">
+                        <Label for="input" class="text-sm font-medium">Additional Input</Label>
+                        <Codemirror id="input" v-model="options.input" :extensions="extensions"
+                            :style="{ height: '140px' }" placeholder="{}" class="border rounded-lg" />
+                    </div>
                 </div>
             </div>
+
             <DialogFooter>
                 <Button variant="secondary" :disabled="loading" @click="emit('close')">Cancel</Button>
                 <Button @click="handleRun" :disabled="loading">

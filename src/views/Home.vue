@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { APP_BACKEND } from '@/env';
 import { ref, computed, onMounted } from 'vue';
-import { Plus, Activity } from 'lucide-vue-next';
+import { Plus, Activity, Settings } from 'lucide-vue-next';
 import type { Flow, FlowRun } from '../types';
 import { fetch } from '@tauri-apps/plugin-http';
 
@@ -238,7 +238,8 @@ const canLoadMoreRuns = computed(() => runPage.value <= runTotalPages.value);
 
 const quickActions = [
     { title: 'Create New Flow', description: 'Start building your workflow', icon: Plus, action: openCreateDialog, color: 'bg-gradient-to-r from-blue-500 to-blue-600', hoverColor: 'hover:from-blue-600 hover:to-blue-700' },
-    { title: 'Run History', description: 'View recent flow runs', icon: Activity, action: scrollToFlowRun, color: 'bg-gradient-to-r from-green-500 to-green-600', hoverColor: 'hover:from-green-600 hover:to-green-700' }
+    { title: 'Run History', description: 'View recent flow runs', icon: Activity, action: scrollToFlowRun, color: 'bg-gradient-to-r from-green-500 to-green-600', hoverColor: 'hover:from-green-600 hover:to-green-700' },
+    { title: 'Settings', description: 'Configure your workspace', icon: Settings, action: () => router.push('/settings'), color: 'bg-gradient-to-r from-purple-500 to-purple-600', hoverColor: 'hover:from-purple-600 hover:to-purple-700' }
 ];
 
 const onFlowClick = (flow: Flow) => {
@@ -291,9 +292,6 @@ const handleRedirect = (runId: string, flowId: string) => {
                             <h1 class="text-4xl font-bold text-gray-900 mb-2">
                                 {{ greeting }} 👋
                             </h1>
-                            <p class="text-lg text-gray-600">
-                                Ready to streamline your workflows?
-                            </p>
                         </div>
                     </div>
 
