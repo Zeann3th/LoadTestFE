@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ReqForge",
+  "productName": "StressPilot",
   "version": "1.0.0",
-  "identifier": "dev.zeann3th.reqforge",
+  "identifier": "dev.zeann3th.stresspilot",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "ReqForge",
+        "title": "StressPilot",
         "width": 1280,
         "height": 720,
         "dragDropEnabled": false
@@ -37,6 +37,7 @@
     "targets": "all",
     "icon": [
       "icons/32x32.png",
+      "icons/64x64.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
