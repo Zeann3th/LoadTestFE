@@ -8,6 +8,19 @@ import { Endpoint } from '../types';
 import { fetch } from '@tauri-apps/plugin-http';
 import EndpointListItem from './EndpointListItem.vue';
 
+// Import dialog components
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
 const endpoints = ref<Endpoint[]>([]);
 const searchTerm = ref('');
 const isFolderExpanded = ref(true);
@@ -21,6 +34,14 @@ const limit = 20;
 const totalPages = ref(1);
 
 const loading = ref(false);
+
+// Upload dialog state
+const uploadDialogOpen = ref(false);
+const uploadLoading = ref(false);
+const pendingFile = ref<File | null>(null);
+const uploadFormData = ref({
+    projectName: ''
+});
 
 const fetchEndpoints = async (isInitial = false) => {
     if (loading.value || page.value > totalPages.value) return;
@@ -53,7 +74,6 @@ const fetchEndpoints = async (isInitial = false) => {
         loading.value = false;
     }
 };
-
 
 const handleScroll = () => {
     const el = scrollContainer.value;
@@ -95,27 +115,51 @@ const onDrop = async (e: DragEvent) => {
     if (!e.dataTransfer || !e.dataTransfer.files.length) return;
 
     const file = e.dataTransfer.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
+    pendingFile.value = file;
+    uploadFormData.value.projectName = '';
+    uploadDialogOpen.value = true;
+};
+
+const handleUploadSubmit = async () => {
+    if (!pendingFile.value || !uploadFormData.value.projectName.trim()) return;
+
+    uploadLoading.value = true;
 
     try {
+        const formData = new FormData();
+        formData.append('file', pendingFile.value);
+        formData.append('projectName', uploadFormData.value.projectName.trim());
+
         const response = await fetch(`${APP_BACKEND}/v1/endpoints/upload`, {
             method: 'POST',
             body: formData,
         });
 
         if (response.ok) {
-            alert(`File "${file.name}" uploaded successfully!`);
+            alert(`File "${pendingFile.value.name}" uploaded successfully!`);
             page.value = 1;
             await fetchEndpoints(true);
+            handleUploadCancel();
         } else {
             alert(`Upload failed with status: ${response.status}`);
         }
     } catch (err) {
         console.error('Upload error:', err);
         alert('Error uploading file.');
+    } finally {
+        uploadLoading.value = false;
     }
 };
+
+const handleUploadCancel = () => {
+    uploadDialogOpen.value = false;
+    pendingFile.value = null;
+    uploadFormData.value.projectName = '';
+};
+
+const isUploadFormValid = computed(() =>
+    uploadFormData.value.projectName.trim() !== ''
+);
 
 onMounted(() => {
     fetchEndpoints(true);
@@ -183,6 +227,42 @@ const filteredEndpoints = computed(() =>
                 </div>
             </div>
         </div>
+
+        <!-- Upload Dialog -->
+        <Dialog :open="uploadDialogOpen" @update:open="uploadDialogOpen = $event">
+            <DialogContent class="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Upload File</DialogTitle>
+                    <DialogDescription>
+                        Enter a project name for the uploaded file.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="grid gap-4 py-4">
+                    <div class="grid grid-cols-4 items-center gap-4">
+                        <Label for="file-name" class="text-right">File</Label>
+                        <div class="col-span-3 text-sm text-gray-600">
+                            {{ pendingFile?.name }}
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-4 items-center gap-4">
+                        <Label for="project-name" class="text-right">Project Name</Label>
+                        <Input id="project-name" v-model="uploadFormData.projectName" class="col-span-3"
+                            placeholder="Enter project name" :disabled="uploadLoading" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="outline" @click="handleUploadCancel" :disabled="uploadLoading">
+                        Cancel
+                    </Button>
+                    <Button type="button" @click="handleUploadSubmit" :disabled="!isUploadFormValid || uploadLoading">
+                        <span v-if="uploadLoading" class="mr-2">
+                            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        </span>
+                        Upload
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
 </template>
 

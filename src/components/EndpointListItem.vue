@@ -33,99 +33,115 @@ const cleanedUrl = computed(() => {
         .replace(/^https?:\/\/[^/]+/, '');
 });
 
+const cleanedEndpointName = computed(() => {
+    return props.endpoint.name.split('/').pop() || props.endpoint.name;
+});
+
+const projectName = computed(() => {
+    return props.endpoint.name.split('/')[0] || 'Miscellaneous';
+});
+
 const onDragEnd = () => {
     isDraggedOver.value = false;
 }
 </script>
 
 <template>
-    <div class="border border-gray-200 rounded-lg mb-2 bg-white shadow-sm transition-all duration-200"
-        :class="{ 'opacity-50 transform scale-95': isDraggedOver }" draggable="true" @dragstart="onDragStart"
+    <div class="border rounded-md mb-1.5 bg-white shadow-sm transition hover:shadow-md"
+        :class="{ 'opacity-50 scale-95': isDraggedOver }" draggable="true" @dragstart="onDragStart"
         @dragend="onDragEnd">
-        <!-- Header Row -->
-        <div class="p-3 cursor-pointer hover:bg-gray-50 flex items-center justify-between" @click="toggleExpanded">
-            <div class="flex items-center space-x-3 flex-1 overflow-hidden">
-                <div class="flex items-center space-x-2 shrink-0">
-                    <component :is="isExpanded ? ChevronDown : ChevronRight" :size="16" class="text-gray-600" />
-                    <span :class="`px-2 py-1 text-xs font-semibold rounded border ${methodColors[endpoint.method]}`">
-                        {{ endpoint.method }}
-                    </span>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-center space-x-2 overflow-hidden">
-                        <span class="font-medium text-gray-900 truncate">{{ endpoint.name }}</span>
-                        <span class="text-sm text-gray-500 font-mono truncate max-w-[250px]">{{ cleanedUrl }}</span>
-                    </div>
-                </div>
+        <!-- Header -->
+        <div class="px-3 py-2 cursor-pointer hover:bg-gray-50 flex items-center justify-between group"
+            @click="toggleExpanded">
+            <div class="flex items-center space-x-2.5 flex-1 overflow-hidden">
+                <component :is="isExpanded ? ChevronDown : ChevronRight" :size="14" class="text-gray-500 shrink-0" />
+                <span :class="`px-1.5 py-0.5 text-sm font-medium rounded ${methodColors[endpoint.method]}`">
+                    {{ endpoint.method }}
+                </span>
+                <span class="font-medium text-gray-900 truncate text-sm">
+                    {{ cleanedEndpointName }}
+                </span>
+                <span class="text-sm text-gray-500 font-mono truncate">
+                    {{ cleanedUrl }}
+                </span>
+                <span class="text-sm text-gray-400 ml-auto shrink-0">
+                    {{ projectName }}
+                </span>
             </div>
-            <!-- Drag handle indicator -->
-            <div class="text-gray-400 text-xs opacity-60">
-                ⋮⋮
-            </div>
+            <div class="text-gray-300 text-sm opacity-0 group-hover:opacity-100 transition ml-2 shrink-0">⋮⋮</div>
         </div>
 
-        <!-- Expanded Details -->
-        <div v-if="isExpanded" class="border-t border-gray-200 p-4 bg-gray-50">
-            <div class="space-y-3">
-                <div>
-                    <h4 class="font-semibold text-sm text-gray-700 mb-2">Request Details</h4>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <span class="font-medium text-gray-600">Method:</span>
-                            <div class="mt-1">
-                                <span
-                                    :class="`px-2 py-1 text-xs font-semibold rounded border ${methodColors[endpoint.method]}`">
-                                    {{ endpoint.method }}
-                                </span>
-                            </div>
+        <!-- Expanded -->
+        <div v-if="isExpanded" class="border-t bg-gray-50/50">
+            <div class="p-3 space-y-2.5 text-sm">
+                <!-- Request Info -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div class="space-y-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm font-medium text-gray-500 w-16">Method</span>
+                            <span :class="`px-1.5 py-0.5 text-sm font-medium rounded ${methodColors[endpoint.method]}`">
+                                {{ endpoint.method }}
+                            </span>
                         </div>
-                        <div>
-                            <span class="font-medium text-gray-600">URL:</span>
-                            <div
-                                class="mt-1 font-mono text-gray-800 bg-white p-2 rounded border border-gray-300 overflow-x-auto whitespace-nowrap">
-                                {{ endpoint.url }}
-                            </div>
+
+                        <div v-if="endpoint.description" class="flex space-x-2">
+                            <span class="text-sm font-medium text-gray-500 w-16 mt-0.5">Info</span>
+                            <p class="text-sm text-gray-600 leading-relaxed">
+                                {{ endpoint.description }}
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Description -->
-                <div v-if="endpoint.description">
-                    <h4 class="font-semibold text-sm text-gray-700 mb-1">Description</h4>
-                    <p class="text-sm text-gray-600"
-                        style="white-space: normal; max-width: 600px; word-wrap: break-word;">
-                        {{ endpoint.description }}
-                    </p>
+                <!-- URL -->
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-medium text-gray-500 w-16">URL</span>
+                    <code
+                        class="text-sm bg-white px-2 py-1 rounded border font-mono text-gray-800 flex-1 overflow-x-auto">
+            {{ endpoint.url }}
+          </code>
                 </div>
 
                 <!-- Parameters -->
-                <div v-if="endpoint.parameters">
-                    <span class="font-medium text-gray-600">Parameters:</span>
-                    <div class="mt-1 bg-white p-2 rounded border border-gray-300 overflow-x-auto">
-                        <pre class="text-sm text-gray-800">{{ JSON.stringify(endpoint.parameters, null, 2) }}</pre>
+                <div v-if="endpoint.parameters" class="bg-white border rounded">
+                    <div class="px-2.5 py-1.5 bg-gray-50 border-b flex justify-between">
+                        <span class="text-sm font-medium text-gray-700">Parameters</span>
+                        <span class="text-sm text-gray-500">{{ Object.keys(endpoint.parameters).length }} items</span>
+                    </div>
+                    <div class="p-2.5 max-h-32 overflow-auto">
+                        <pre class="text-sm text-gray-800 whitespace-pre-wrap">
+              {{ JSON.stringify(endpoint.parameters, null, 2) }}
+            </pre>
                     </div>
                 </div>
 
                 <!-- Headers -->
-                <div v-if="endpoint.headers">
-                    <span class="font-medium text-gray-600">Headers:</span>
-                    <div class="mt-1 bg-white p-2 rounded border border-gray-300 overflow-x-auto">
-                        <pre class="text-sm text-gray-800">{{ JSON.stringify(endpoint.headers, null, 2) }}</pre>
+                <div v-if="endpoint.headers" class="bg-white border rounded">
+                    <div class="px-2.5 py-1.5 bg-gray-50 border-b flex justify-between">
+                        <span class="text-sm font-medium text-gray-700">Headers</span>
+                        <span class="text-sm text-gray-500">{{ Object.keys(endpoint.headers).length }} items</span>
+                    </div>
+                    <div class="p-2.5 max-h-32 overflow-auto">
+                        <pre class="text-sm text-gray-800 whitespace-pre-wrap"
+                            v-text="JSON.stringify(endpoint.headers, null, 2)" />
                     </div>
                 </div>
 
                 <!-- Body -->
-                <div v-if="endpoint.body">
-                    <span class="font-medium text-gray-600">Body:</span>
-                    <div class="mt-1 bg-white p-2 rounded border border-gray-300 overflow-x-auto">
-                        <pre class="text-sm text-gray-800">{{ JSON.stringify(endpoint.body, null, 2) }}</pre>
+                <div v-if="endpoint.body" class="bg-white border rounded">
+                    <div class="px-2.5 py-1.5 bg-gray-50 border-b">
+                        <span class="text-sm font-medium text-gray-700">Request Body</span>
+                    </div>
+                    <div class="p-2.5 max-h-40 overflow-auto">
+                        <pre class="text-sm text-gray-800 whitespace-pre-wrap"
+                            v-text="JSON.stringify(endpoint.body, null, 2)" />
                     </div>
                 </div>
 
                 <!-- Timestamps -->
-                <div class="text-xs text-gray-500 pt-2 border-t border-gray-200">
-                    <div>Created: {{ new Date(endpoint.createdAt).toLocaleDateString() }}</div>
-                    <div>Updated: {{ new Date(endpoint.updatedAt).toLocaleDateString() }}</div>
+                <div class="flex justify-between text-xs text-gray-400">
+                    <span>Created at: {{ new Date(endpoint.createdAt).toLocaleDateString() }}</span>
+                    <span>Updated at: {{ new Date(endpoint.updatedAt).toLocaleDateString() }}</span>
                 </div>
             </div>
         </div>
@@ -133,12 +149,30 @@ const onDragEnd = () => {
 </template>
 
 <style scoped>
-/* Add drag cursor when hovering over draggable items */
 [draggable="true"] {
     cursor: grab;
 }
 
 [draggable="true"]:active {
     cursor: grabbing;
+}
+
+.overflow-auto::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+.overflow-auto::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 2px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 </style>
