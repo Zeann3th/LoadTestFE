@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Download, ArrowLeft, Activity, Clock } from 'lucide-vue-next';
+import { toast } from "vue-sonner";
 
 const props = defineProps<{
     runId: string;
@@ -171,8 +172,9 @@ const handleExport = async () => {
             path
         )
     } catch (error) {
-        console.error("Export failed:", error);
-        alert("Failed to generate report. Please try again.");
+        toast.error('Error exporting report', {
+            description: error instanceof Error ? error.message : 'Unknown error'
+        });
     }
 }
 

@@ -18,6 +18,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { APP_BACKEND } from '@/env';
+import { toast } from 'vue-sonner';
 
 const goBack = () => {
     router.push('/');
@@ -32,34 +33,49 @@ const confirmationDialog = ref({
 });
 
 const deleteRuns = async () => {
-    await fetch(`${APP_BACKEND}/v1/runs`, {
+    const res = await fetch(`${APP_BACKEND}/v1/runs`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json'
         }
     });
+    if (!res.ok) {
+        toast.error('Failed to delete runs');
+        confirmationDialog.value.loading = false;
+        return;
+    }
     confirmationDialog.value.loading = false;
     confirmationDialog.value.open = false;
 };
 
 const deleteAllEndpoints = async () => {
-    await fetch(`${APP_BACKEND}/v1/endpoints`, {
+    const res = await fetch(`${APP_BACKEND}/v1/endpoints`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json'
         }
     });
+    if (!res.ok) {
+        toast.error('Failed to delete endpoints');
+        confirmationDialog.value.loading = false;
+        return;
+    }
     confirmationDialog.value.loading = false;
     confirmationDialog.value.open = false;
 };
 
 const deleteAllFlows = async () => {
-    await fetch(`${APP_BACKEND}/v1/flows`, {
+    const res = await fetch(`${APP_BACKEND}/v1/flows`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json'
         }
     });
+    if (!res.ok) {
+        toast.error('Failed to delete flows');
+        confirmationDialog.value.loading = false;
+        return;
+    }
     confirmationDialog.value.loading = false;
     confirmationDialog.value.open = false;
 };

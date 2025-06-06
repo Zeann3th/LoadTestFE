@@ -13,6 +13,7 @@ import type { RunOptions } from '@/types'
 import { fetch } from '@tauri-apps/plugin-http'
 import { open as openFileDialog } from '@tauri-apps/plugin-dialog'
 import { readTextFile } from '@tauri-apps/plugin-fs'
+import { toast } from 'vue-sonner'
 
 const props = defineProps<{
     open: boolean
@@ -74,8 +75,12 @@ const handleRun = async () => {
             parsedInput = JSON.parse(options.value.input || '{}')
             parsedCredentials = JSON.parse(options.value.credentials || '[]')
         } catch (parseError) {
-            console.warn('Invalid JSON input, using empty object:', parseError)
+            toast.error('Invalid JSON format', {
+                description: 'Please check your input and credentials JSON.'
+            })
             parsedInput = {}
+            parsedCredentials = []
+            return
         }
 
         const payload = {
@@ -98,10 +103,14 @@ const handleRun = async () => {
             emit('run', runId)
             emit('close')
         } else {
-            console.error('Failed to start run:', response.statusText)
+            toast.error(`Failed to start run: ${response.statusText}`, {
+                description: 'Please check your parameters and try again.'
+            })
         }
     } catch (error) {
-        console.error('Error starting run:', error)
+        toast.error('Failed to start run: ' + error, {
+            description: 'Please check your parameters and try again.'
+        })
     } finally {
         loading.value = false
     }

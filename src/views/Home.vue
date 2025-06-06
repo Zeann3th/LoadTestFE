@@ -12,6 +12,7 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { useRouter } from 'vue-router';
 import { save } from '@tauri-apps/plugin-dialog';
 import { download } from '@tauri-apps/plugin-upload';
+import { toast } from 'vue-sonner';
 
 const flows = ref<Flow[]>([]);
 const runs = ref<FlowRun[]>([]);
@@ -68,7 +69,9 @@ const fetchFlows = async (isInitialOrReload = false) => {
             flowPage.value = flowTotalPages.value + 1;
         }
     } catch (err) {
-        console.error('Error fetching flows:', err);
+        toast.error('Error fetching flows', {
+            description: err instanceof Error ? err.message : 'Unknown error'
+        });
     } finally {
         loadingFlows.value = false;
     }
@@ -103,7 +106,9 @@ const fetchRuns = async (isInitialOrReload = false) => {
             runPage.value = runTotalPages.value + 1;
         }
     } catch (err) {
-        console.error('Error fetching runs:', err);
+        toast.error('Error fetching runs', {
+            description: err instanceof Error ? err.message : 'Unknown error'
+        });
     } finally {
         loadingRuns.value = false;
     }
@@ -140,10 +145,14 @@ const handleCreateFlow = async (data: { name: string; description?: string }) =>
             flows.value.unshift(newFlow);
             isCreateDialogOpen.value = false;
         } else {
-            console.error('Failed to create flow:', await res.text());
+            toast.error('Failed to create flow', {
+                description: await res.text()
+            });
         }
     } catch (err) {
-        console.error('Error creating flow:', err);
+        toast.error('Error creating flow', {
+            description: err instanceof Error ? err.message : 'Unknown error'
+        });
     } finally {
         isCreatingFlow.value = false;
     }
@@ -174,10 +183,14 @@ const handleEditFlow = async (data: { name: string; description?: string }) => {
             currentEditingFlow.value = null;
             isEditDialogOpen.value = false;
         } else {
-            console.error('Failed to update flow:', await res.text());
+            toast.error('Failed to update flow:', {
+                description: await res.text()
+            });
         }
     } catch (err) {
-        console.error('Error updating flow:', err);
+        toast.error('Error updating flow', {
+            description: err instanceof Error ? err.message : 'Unknown error'
+        });
     } finally {
         isUpdatingFlow.value = false;
     }
@@ -193,10 +206,14 @@ const handleDeleteFlow = async () => {
             flowToDelete.value = null;
             isDeleteDialogOpen.value = false;
         } else {
-            console.error('Failed to delete flow:', await res.text());
+            toast.error('Failed to delete flow', {
+                description: await res.text()
+            });
         }
     } catch (err) {
-        console.error('Error deleting flow:', err);
+        toast.error('Error deleting flow', {
+            description: err instanceof Error ? err.message : 'Unknown error'
+        });
     } finally {
         isDeletingFlow.value = false;
     }
@@ -270,8 +287,9 @@ const handleExport = async (runId: string) => {
             path
         )
     } catch (error) {
-        console.error("Export failed:", error);
-        alert("Failed to generate report. Please try again.");
+        toast.error('Error exporting report', {
+            description: error instanceof Error ? error.message : 'Unknown error'
+        });
     }
 }
 

@@ -52,7 +52,6 @@ const savePostProcessor = async (script: string) => {
         })
 
         if (response.ok) {
-            console.log('Post-processor saved successfully')
             if (props.data.endpoint) {
                 props.data.endpoint.postProcessor = script
             }
@@ -62,7 +61,6 @@ const savePostProcessor = async (script: string) => {
             errorMessage.value = `Failed to save: ${response.status} ${errorText}`
         }
     } catch (error) {
-        console.error('Error saving post-processor:', error)
         errorMessage.value = error instanceof Error ? error.message : 'Unknown error occurred'
     } finally {
         isLoading.value = false

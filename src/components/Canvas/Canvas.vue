@@ -11,6 +11,7 @@ import CanvasNode from './CanvasNode.vue';
 import { fetch } from '@tauri-apps/plugin-http';
 import { APP_BACKEND } from '@/env';
 import { debounce } from '@/utils';
+import { toast } from 'vue-sonner';
 
 const props = defineProps<{
     flowId: string;
@@ -121,11 +122,12 @@ async function fetchFlowDetail(): Promise<FlowDetail | null> {
         }
 
         const flowDetail: FlowDetail = await res.json();
-        console.log('Fetched flow detail:', flowDetail);
 
         return flowDetail;
     } catch (err) {
-        console.error('Error fetching flow detail:', err);
+        toast.error('Error fetching flow detail', {
+            description: err instanceof Error ? err.message : 'Unknown error occurred'
+        });
         loadError.value = err instanceof Error ? err.message : 'Unknown error occurred';
         return null;
     } finally {
@@ -216,10 +218,12 @@ async function saveSequence(sequence: string[]) {
         });
 
         if (res.ok) {
-            console.log('Sequence saved successfully:', await res.json());
+            toast.success('Execution order saved successfully');
             lastSavedSequence.value = JSON.stringify(sequence);
         } else {
-            console.error('Failed to save sequence:', res.status, await res.text());
+            toast.error(`Failed to save sequence`, {
+                description: `Status: ${res.status} ${res.statusText}`
+            });
         }
     } catch (err) {
         console.error('Failed to save execution order:', err);

@@ -8,7 +8,6 @@ import { Endpoint } from '../types';
 import { fetch } from '@tauri-apps/plugin-http';
 import EndpointListItem from './EndpointListItem.vue';
 
-// Import dialog components
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -20,6 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { toast } from 'vue-sonner';
 
 const endpoints = ref<Endpoint[]>([]);
 const searchTerm = ref('');
@@ -35,7 +35,6 @@ const totalPages = ref(1);
 
 const loading = ref(false);
 
-// Upload dialog state
 const uploadDialogOpen = ref(false);
 const uploadLoading = ref(false);
 const pendingFile = ref<File | null>(null);
@@ -57,6 +56,11 @@ const fetchEndpoints = async (isInitial = false) => {
         const res = await fetch(`${APP_BACKEND}/v1/endpoints?page=${page.value}&limit=${limit}`, {
             method: 'GET',
         });
+
+        if (!res.ok) {
+            toast.error(`Failed to fetch endpoints: ${res.status} - ${res.statusText}`);
+        }
+
         const json = await res.json();
 
         if (isInitial) {
@@ -69,7 +73,7 @@ const fetchEndpoints = async (isInitial = false) => {
         page.value += 1;
 
     } catch (err) {
-        console.error('Error fetching endpoints:', err);
+        toast.error('Error fetching endpoints: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
         loading.value = false;
     }
@@ -141,11 +145,10 @@ const handleUploadSubmit = async () => {
             await fetchEndpoints(true);
             handleUploadCancel();
         } else {
-            alert(`Upload failed with status: ${response.status}`);
+            toast.error(`Failed uploading file: ${response.status} - ${response.statusText}`);
         }
     } catch (err) {
-        console.error('Upload error:', err);
-        alert('Error uploading file.');
+        toast.error('Error uploading file', { description: err instanceof Error ? err.message : 'Unknown error' });
     } finally {
         uploadLoading.value = false;
     }
