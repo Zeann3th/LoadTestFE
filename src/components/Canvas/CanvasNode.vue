@@ -128,7 +128,7 @@ const saveProcessor = async (script: string) => {
                     </span>
                     <span v-if="props.data.endpoint.processor"
                         class="px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded">
-                        Post-processor
+                        Processor
                     </span>
                 </div>
             </div>
