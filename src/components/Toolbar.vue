@@ -1,10 +1,12 @@
-<!-- components/Toolbar.vue -->
 <script lang="ts" setup>
 import { onBeforeUnmount, onMounted } from 'vue';
 import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
+import { Menu } from 'lucide-vue-next';
 const emit = defineEmits<{
     (e: 'play'): void;
     (e: 'home'): void;
+    (e: 'debug', action: "prev" | "next"): void;
+    (e: 'menu'): void
 }>();
 
 const onPlayClick = () => {
@@ -15,18 +17,26 @@ const onHomeClick = () => {
     emit('home');
 };
 
+const onMenuCLick = () => {
+    emit('menu')
+}
+
 onMounted(async () => {
     await register('CmdOrCtrl+Shift+H', () => {
         onHomeClick();
     });
-    await register('CmdOrCtrl+Shift+P', () => {
+    await register('CmdOrCtrl+Shift+R', () => {
         onPlayClick();
+    });
+    await register('CmdOrCtrl+Shift+B', () => {
+        onMenuCLick();
     });
 });
 
 onBeforeUnmount(async () => {
     await unregister('CmdOrCtrl+Shift+H');
-    await unregister('CmdOrCtrl+Shift+P');
+    await unregister('CmdOrCtrl+Shift+R');
+    await unregister('CmdOrCtrl+Shift+B')
 });
 
 </script>
@@ -42,6 +52,12 @@ onBeforeUnmount(async () => {
                     <path stroke-linecap="round" stroke-linejoin="round"
                         d="M3 9.75L12 3l9 6.75V20a1 1 0 01-1 1h-5.25a.75.75 0 01-.75-.75v-5.5a.75.75 0 00-.75-.75h-3a.75.75 0 00-.75.75v5.5a.75.75 0 01-.75.75H4a1 1 0 01-1-1V9.75z" />
                 </svg>
+            </button>
+
+            <!-- Toggle Menu-->
+            <button @click="onMenuCLick" class="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                title="Toggle Menu (⌘ + ⇧ + B)">
+                <Menu class="w-5 h-5 text-gray-700" />
             </button>
 
             <!-- Play Icon -->
