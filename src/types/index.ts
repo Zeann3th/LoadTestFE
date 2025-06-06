@@ -25,7 +25,7 @@ export interface Flow {
 }
 
 export interface ActionNode extends Endpoint {
-    postProcessor?: Record<string, any>;
+    processor?: Record<string, any>;
 }
 
 export interface FlowDetail {

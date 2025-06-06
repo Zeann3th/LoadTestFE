@@ -3,20 +3,20 @@ import { Handle, Position, type NodeProps } from '@vue-flow/core'
 import { X, Settings } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { fetch } from '@tauri-apps/plugin-http'
-import PostProcessorDialog from './PostProcessorDialog.vue'
+import ProcessorDialog from './ProcessorDialog.vue'
 import { APP_BACKEND } from '@/env'
 import { methodColors } from '@/types'
 
 const props = defineProps<NodeProps<any>>()
 
 const showDialog = ref(false)
-const postProcessorText = ref('')
+const processorText = ref('')
 const isLoading = ref(false)
 const errorMessage = ref('')
 
 const openEditDialog = () => {
-    const processor = props.data.endpoint.postProcessor
-    postProcessorText.value = typeof processor === 'string'
+    const processor = props.data.endpoint.processor
+    processorText.value = typeof processor === 'string'
         ? processor
         : JSON.stringify(processor ?? {}, null, 2)
 
@@ -26,11 +26,11 @@ const openEditDialog = () => {
 
 const closeDialog = () => {
     showDialog.value = false
-    postProcessorText.value = ''
+    processorText.value = ''
     errorMessage.value = ''
 }
 
-const savePostProcessor = async (script: string) => {
+const saveProcessor = async (script: string) => {
     if (!props.data.flowId || !props.data.executionIndex) {
         errorMessage.value = 'Missing flow ID or execution index'
         return
@@ -47,13 +47,13 @@ const savePostProcessor = async (script: string) => {
             },
             body: JSON.stringify({
                 sequence: props.data.executionIndex,
-                postProcessor: JSON.parse(script)
+                processor: JSON.parse(script)
             })
         })
 
         if (response.ok) {
             if (props.data.endpoint) {
-                props.data.endpoint.postProcessor = script
+                props.data.endpoint.processor = script
             }
             closeDialog()
         } else {
@@ -90,7 +90,7 @@ const savePostProcessor = async (script: string) => {
                 <div class="flex items-center space-x-1">
                     <button @click.stop="openEditDialog"
                         class="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors"
-                        title="Configure postprocessor">
+                        title="Configure processor">
                         <Settings :size="16" />
                     </button>
                     <button @click="props.data.onDelete"
@@ -126,7 +126,7 @@ const savePostProcessor = async (script: string) => {
                         class="px-2 py-1 bg-yellow-50 text-yellow-700 text-xs rounded">
                         Body
                     </span>
-                    <span v-if="props.data.endpoint.postProcessor"
+                    <span v-if="props.data.endpoint.processor"
                         class="px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded">
                         Post-processor
                     </span>
@@ -134,9 +134,9 @@ const savePostProcessor = async (script: string) => {
             </div>
         </div>
 
-        <PostProcessorDialog v-model="showDialog" :initialScript="postProcessorText"
-            :endpointName="props.data.endpoint.name" :executionIndex="props.data.executionIndex" :loading="isLoading"
-            :error="errorMessage" @save="savePostProcessor" />
+        <ProcessorDialog v-model="showDialog" :initialScript="processorText" :endpointName="props.data.endpoint.name"
+            :executionIndex="props.data.executionIndex" :loading="isLoading" :error="errorMessage"
+            @save="saveProcessor" />
     </div>
 </template>
 

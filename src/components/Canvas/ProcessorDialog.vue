@@ -59,9 +59,9 @@ const onSave = () => {
     <Dialog :open="modelValue" @update:open="val => emit('update:modelValue', val)">
         <DialogContent class="max-w-2xl">
             <DialogHeader>
-                <DialogTitle>Configure Post-processor</DialogTitle>
+                <DialogTitle>Configure Processor</DialogTitle>
                 <DialogDescription>
-                    Configure the post-processor for step {{ executionIndex }}: {{ endpointName }}
+                    Configure the processor for step {{ executionIndex }}: {{ endpointName }}
                 </DialogDescription>
             </DialogHeader>
 
