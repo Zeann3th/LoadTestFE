@@ -12,10 +12,20 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "StressPilot",
         "width": 1280,
         "height": 720,
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "visible": false
+      },
+      {
+        "label": "splashscreen",
+        "url": "splashscreen.html",
+        "width": 800,
+        "height": 450,
+        "decorations": false,
+        "center": true
       }
     ],
     "security": {
